@@ -2,11 +2,7 @@ import "./App.css";
 import TimeEntry from "./components/TimeEntry";
 
 function App() {
-  return (
-    <>
-      <TimeEntry />
-    </>
-  );
+  return <TimeEntry />
 }
 
 export default App;
