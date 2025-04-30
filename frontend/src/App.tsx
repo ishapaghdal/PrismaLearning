@@ -1,35 +1,30 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+// import FullCalendar from '@fullcalendar/react'
+// import dayGridPlugin from '@fullcalendar/daygrid'
+// import { WeekNumberContainer } from '@fullcalendar/core/internal.js';
+import Calendar  from './component/Calendar';
+// export function Calendar() {
+//   return (
+//     <FullCalendar
+//       plugins={[ dayGridPlugin ]}
+//       initialView="dayGridMonth"
+//       titleFormat={{week : 'long'}}
+//       titleRangeSeparator='of'
+//       contentHeight={'1100px'}
+//       allDayText='hello'
+//       dayCount={5}
+//       weekends= {false}
+//       weekNumbers= {true}
+//       displayEventTime={}
+//       events={[
+//         { title: 'event 1', date: '2025-04-13' },
+//         { title: 'event 2', date: '2025-04-18' }
+//       ]}
+//     />
+//   )
+// }
 
 function App() {
-  const [count, setCount] = useState(0)
-
-  return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+  return <Calendar/>;
 }
 
-export default App
+export default App;
