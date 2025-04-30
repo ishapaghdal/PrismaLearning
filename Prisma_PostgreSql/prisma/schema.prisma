@@ -1,0 +1,617 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Client {
+  client_id   String    @id @db.VarChar(100)
+  client_name String    @db.VarChar(200)
+  created_ts  DateTime  @default(now()) @db.Timestamptz(6)
+  updated_ts  DateTime  @updatedAt @db.Timestamptz(6)
+  Project     Project[]
+
+  @@index([client_id], map: "Client_client_id_fc42f907_like")
+}
+
+model Project {
+  project_id           String              @id @db.VarChar(100)
+  project_name         String              @db.VarChar(200)
+  archived             Boolean?            @default(false)
+  billable             Boolean
+  start_date           DateTime?           @db.Timestamptz(6)
+  end_date             DateTime?           @db.Timestamptz(6)
+  project_state        String              @default("Unknown") @db.VarChar(25)
+  type                 String              @default("Web") @db.VarChar(25)
+  description          String?
+  phase                String              @default("Post Production") @db.VarChar(25)
+  close_remark         String?
+  is_active            Boolean             @default(true)
+  client_id            String?             @db.VarChar(100)
+  project_billing_type String?             @db.VarChar(50)
+  created_ts           DateTime            @default(now()) @db.Timestamptz(6)
+  updated_ts           DateTime            @updatedAt @db.Timestamptz(6)
+  History              History[]
+  client               Client?             @relation(fields: [client_id], references: [client_id], onDelete: NoAction, onUpdate: NoAction, map: "Project_client_id_4b838055_fk_Client_client_id")
+  member               ProjectEmployee[]
+  StateMaster          StateMaster[]
+  Task                 Task[]
+  TimeEntry            TimeEntry[]
+  ProjectSPOC          ProjectSPOC[]
+  ProjectContracts     ProjectContracts[]
+  ProjectDepartment    ProjectDepartment[]
+
+  @@index([client_id], map: "Project_client_id_4b838055")
+  @@index([client_id], map: "Project_client_id_4b838055_like")
+  @@index([project_id], map: "Project_project_id_d6a3e507_like")
+  @@index([project_name], map: "Project_project_name_c0a0a36e")
+  @@index([project_name], map: "Project_project_name_c0a0a36e_like")
+}
+
+model ProjectDepartment {
+  id            Int        @id @default(autoincrement())
+  project_id    String     @db.VarChar(100)
+  department_id Int
+  project       Project    @relation(fields: [project_id], references: [project_id])
+  department    Department @relation(fields: [department_id], references: [id])
+  created_ts    DateTime   @default(now()) @db.Timestamptz(6)
+  updated_ts    DateTime   @updatedAt @db.Timestamptz(6)
+}
+
+model Employee {
+  employee_id               String                   @id @db.VarChar(100)
+  employee_name             String                   @db.VarChar(200)
+  employee_email            String                   @unique @db.VarChar(100)
+  employee_status           String                   @db.VarChar(100)
+  join_date                 DateTime?                @db.Date
+  exit_date                 DateTime?                @db.Date
+  include_in_reports        Boolean?                 @default(true)
+  created_ts                DateTime                 @default(now()) @db.Timestamptz(6)
+  updated_ts                DateTime                 @updatedAt @db.Timestamptz(6)
+  profile                   String?                  @db.VarChar(200)
+  role_id                   Int
+  is_active                 Boolean
+  is_staff                  Boolean
+  is_superuser              Boolean
+  experience_before_joining Int?
+  employment_type           String                   @default("Full Time") @db.VarChar(255)
+  contact                   String?                  @db.VarChar(20)
+  last_login                DateTime?                @db.Timestamptz(6)
+  password                  String?                  @db.VarChar(255)
+  device_id                 String?
+  keka_id                   String?                  @unique
+  role                      Role                     @relation(fields: [role_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "Employee_role_id_81f969c0_fk_Role_id")
+  department                Department               @relation(fields: [department_id], references: [id])
+  department_id             Int                      @default(1)
+  customize_view            Json
+  reporting_manager_id      String?                  @unique
+  reporting_manager         Employee?                @relation("EmployeeRelation", fields: [reporting_manager_id], references: [employee_id])
+  employee                  Employee?                @relation("EmployeeRelation")
+  employee_skill            EmployeeSkill[]
+  History                   History[]
+  PerPersonExpectedHour     PerPersonExpectedHour[]
+  project_employee          ProjectEmployee[]
+  TimeEntry                 TimeEntry[]
+  WeeklyTimeSheetEntries    WeeklyTimeSheetEntries[]
+  ProjectSPOC               ProjectSPOC[]
+  attendances               Attendance[]             @relation("EmployeeToAttendance")
+  Attendance                Attendance[]
+  EmployeeWorkMode          EmployeeWorkMode[]       @relation(map: "History_employee_id_3a5a7ecb_fk_Employee_employee_id")
+  EmployeeCertificate       EmployeeCertificate[]
+  EmployeeNotification      EmployeeNotification[]
+  EmployeeDeviceToken       EmployeeDeviceToken[]
+  CertificateRequester      Certificate[]            @relation("CertificateRequester")
+  CertificateAuthorizer     Certificate[]            @relation("CertificateAuthorizer")
+
+  @@index([employee_email], map: "Employee_employee_email_08560504_like")
+  @@index([employee_id], map: "Employee_employee_id_fe00240c_like")
+  @@index([employee_name], map: "Employee_employee_name_487e1283")
+  @@index([employee_name], map: "Employee_employee_name_487e1283_like")
+  @@index([role_id], map: "Employee_role_id_81f969c0")
+}
+
+model EmployeeSkill {
+  id                        Int                   @id @default(autoincrement())
+  is_deleted                Boolean               @default(false)
+  employee_id               String                @db.VarChar(100)
+  skill_id                  Int
+  skills_expertise_level_id Int
+  created_ts                DateTime              @default(now()) @db.Timestamptz(6)
+  updated_ts                DateTime              @updatedAt @db.Timestamptz(6)
+  is_core_skill             Boolean               @default(false)
+  notes                     Json                  @default("[]") @db.JsonB
+  employee                  Employee              @relation(fields: [employee_id], references: [employee_id], onDelete: NoAction, onUpdate: NoAction, map: "EmployeeSkill_employee_id_6ce5c15d_fk_Employee_employee_id")
+  skill                     Skills                @relation(fields: [skill_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "EmployeeSkill_skill_id_00f5f54a_fk_Skills_id")
+  skills_expertise_levels   SkillsExpertiseLevels @relation(fields: [skills_expertise_level_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "EmployeeSkill_skills_expertise_lev_811f7a30_fk_SkillsExp")
+
+  @@unique([employee_id, skill_id], map: "EmployeeSkill_employee_id_skill_id_5f247a79_uniq")
+  @@index([employee_id], map: "EmployeeSkill_employee_id_6ce5c15d")
+  @@index([employee_id], map: "EmployeeSkill_employee_id_6ce5c15d_like")
+  @@index([skill_id], map: "EmployeeSkill_skill_id_00f5f54a")
+  @@index([skills_expertise_level_id], map: "EmployeeSkill_skills_expertise_level_id_811f7a30")
+}
+
+model ProjectEmployee {
+  id                   Int       @id @default(autoincrement())
+  allocated_time       Int?
+  start_date           DateTime? @db.Timestamptz(6)
+  end_date             DateTime? @db.Timestamptz(6)
+  is_billable          Boolean   @default(false)
+  is_archive           Boolean   @default(false)
+  is_deleted           Boolean   @default(false)
+  employee_id          String    @db.VarChar(100)
+  project_id           String    @db.VarChar(100)
+  role_id              Int       @default(4)
+  designation_alias_id Int
+  created_ts           DateTime  @default(now()) @db.Timestamptz(6)
+  updated_ts           DateTime  @updatedAt @db.Timestamptz(6)
+
+  designation_alias    DesignationAlias       @relation(fields: [designation_alias_id], references: [id])
+  employee             Employee               @relation(fields: [employee_id], references: [employee_id], onDelete: NoAction, onUpdate: NoAction, map: "ProjectEmployee_employee_id_78067971_fk_Employee_employee_id")
+  project              Project                @relation(fields: [project_id], references: [project_id], onDelete: NoAction, onUpdate: NoAction, map: "ProjectEmployee_project_id_4686d99d_fk_Project_project_id")
+  role                 Role                   @relation(fields: [role_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "ProjectEmployee_role_id_612e8d8f_fk_Role_id")
+  ProjectEmployeeSkill ProjectEmployeeSkill[]
+
+  @@index([employee_id], map: "ProjectEmployee_employee_id_78067971")
+  @@index([employee_id], map: "ProjectEmployee_employee_id_78067971_like")
+  @@index([project_id], map: "ProjectEmployee_project_id_4686d99d")
+  @@index([project_id], map: "ProjectEmployee_project_id_4686d99d_like")
+  @@index([role_id], map: "ProjectEmployee_role_id_612e8d8f")
+}
+
+model DesignationAlias {
+  id              Int               @id @default(autoincrement())
+  name            String            @unique
+  created_ts      DateTime          @default(now()) @db.Timestamptz(6)
+  updated_ts      DateTime          @updatedAt @db.Timestamptz(6)
+  ProjectEmployee ProjectEmployee[]
+}
+
+model ProjectSPOC {
+  id          Int      @id @default(autoincrement())
+  employee_id String   @db.VarChar(100)
+  project_id  String   @db.VarChar(100)
+  created_ts  DateTime @default(now()) @db.Timestamptz(6)
+  updated_ts  DateTime @updatedAt @db.Timestamptz(6)
+  employee    Employee @relation(fields: [employee_id], references: [employee_id])
+  project     Project  @relation(fields: [project_id], references: [project_id])
+}
+
+model ProjectContracts {
+  id                  Int      @id @default(autoincrement())
+  project_id          String   @db.VarChar(100)
+  contract_start_date DateTime @db.Timestamptz(6)
+  contract_end_date   DateTime @db.Timestamptz(6)
+  created_ts          DateTime @default(now()) @db.Timestamptz(6)
+  updated_ts          DateTime @updatedAt @db.Timestamptz(6)
+  project             Project  @relation(fields: [project_id], references: [project_id])
+}
+
+model Role {
+  id                            Int               @id @default(autoincrement())
+  role_name                     String            @default("Engineer") @db.VarChar(15)
+  is_associate_with_role        Boolean
+  is_associate_with_designation Boolean
+  is_associate_with_allocation  Boolean
+  created_ts                    DateTime          @default(now()) @db.Timestamptz(6)
+  updated_ts                    DateTime          @updatedAt @db.Timestamptz(6)
+  Employee                      Employee[]
+  ProjectEmployee               ProjectEmployee[]
+  RolePermissions               RolePermission[]
+}
+
+model Permission {
+  id              Int              @id @default(autoincrement())
+  slug            String           @unique
+  description     String
+  created_ts      DateTime         @default(now()) @db.Timestamptz(6)
+  updated_ts      DateTime         @updatedAt @db.Timestamptz(6)
+  RolePermissions RolePermission[]
+}
+
+model RolePermission {
+  id                             Int                             @id @default(autoincrement())
+  role_id                        Int
+  permission_id                  Int
+  is_active                      Boolean                         @default(true)
+  created_ts                     DateTime                        @default(now()) @db.Timestamptz(6)
+  updated_ts                     DateTime                        @updatedAt @db.Timestamptz(6)
+  Role                           Role                            @relation(fields: [role_id], references: [id])
+  Permission                     Permission                      @relation(fields: [permission_id], references: [id])
+  PersonalizationRolePermissions PersonalizationRolePermission[]
+
+  @@unique([role_id, permission_id])
+}
+
+model Personalization {
+  id                             Int                             @id @default(autoincrement())
+  table_name                     String
+  column_name                    String
+  default_order                  Int
+  default_selected               Boolean                         @default(true)
+  created_ts                     DateTime                        @default(now()) @db.Timestamptz(6)
+  updated_ts                     DateTime                        @updatedAt @db.Timestamptz(6)
+  PersonalizationRolePermissions PersonalizationRolePermission[]
+}
+
+model PersonalizationRolePermission {
+  id                 Int             @id @default(autoincrement())
+  personalization_id Int
+  role_permission_id Int
+  created_ts         DateTime        @default(now()) @db.Timestamptz(6)
+  updated_ts         DateTime        @updatedAt @db.Timestamptz(6)
+  Personalization    Personalization @relation(fields: [personalization_id], references: [id])
+  RolePermissions    RolePermission  @relation(fields: [role_permission_id], references: [id])
+}
+
+model Department {
+  id                                    Int      @id @default(autoincrement())
+  department_name                       String   @db.VarChar(200)
+  is_associate_with_department          Boolean
+  is_associate_with_skills              Boolean
+  is_associated_with_project_department Boolean
+  created_ts                            DateTime @default(now()) @db.Timestamptz(6)
+  updated_ts                            DateTime @updatedAt @db.Timestamptz(6)
+
+  Employee           Employee[]
+  SkillTagDepartment SkillTagDepartment[]
+  ProjectDepartment  ProjectDepartment[]
+
+  @@index([department_name], map: "Department_department_name_72789f5f")
+  @@index([department_name], map: "Department_department_name_72789f5f_like")
+}
+
+/// This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.
+model DefaultProjectTasks {
+  created_ts               DateTime     @db.Timestamptz(6)
+  updated_ts               DateTime     @db.Timestamptz(6)
+  default_task_id          String       @id @db.VarChar(100)
+  default_task_name        String       @db.VarChar(200)
+  default_task_template_id Int
+  TaskTemplate             TaskTemplate @relation(fields: [default_task_template_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "DefaultProjectTasks_default_task_templat_a0b30ff6_fk_TaskTempl")
+
+  @@unique([default_task_name, default_task_template_id], map: "DefaultProjectTasks_default_task_name_defaul_38aa1bd2_uniq")
+  @@index([default_task_id], map: "DefaultProjectTasks_default_task_id_73109efd_like")
+  @@index([default_task_template_id], map: "DefaultProjectTasks_default_task_template_id_a0b30ff6")
+}
+
+model TaskTemplate {
+  id                  Int                   @id @default(autoincrement())
+  task_template_name  String                @db.VarChar(200)
+  created_ts          DateTime              @default(now()) @db.Timestamptz(6)
+  updated_ts          DateTime              @updatedAt @db.Timestamptz(6)
+  DefaultProjectTasks DefaultProjectTasks[]
+}
+
+model StateMaster {
+  id            Int      @id @default(autoincrement())
+  project_state String   @db.VarChar(25)
+  date          DateTime @db.Timestamptz(6)
+  project_id    String   @db.VarChar(100)
+  remark        String?  @db.VarChar(200)
+  created_ts    DateTime @default(now()) @db.Timestamptz(6)
+  updated_ts    DateTime @updatedAt @db.Timestamptz(6)
+  project       Project  @relation(fields: [project_id], references: [project_id], onDelete: NoAction, onUpdate: NoAction, map: "StateMaster_project_id_0c885a3c_fk_Project_project_id")
+
+  @@index([project_id], map: "StateMaster_project_id_0c885a3c")
+  @@index([project_id], map: "StateMaster_project_id_0c885a3c_like")
+}
+
+model Skills {
+  id                      Int                    @id @default(autoincrement())
+  name                    String                 @db.VarChar(200)
+  tag                     String                 @db.VarChar(100)
+  created_ts              DateTime               @default(now()) @db.Timestamptz(6)
+  updated_ts              DateTime               @updatedAt @db.Timestamptz(6)
+  skill_tag_department_id Int
+  SkillTagDepartment      SkillTagDepartment     @relation(fields: [skill_tag_department_id], references: [id])
+  member_skill            EmployeeSkill[]
+  ProjectEmployeeSkill    ProjectEmployeeSkill[]
+}
+
+model SkillTagDepartment {
+  id            Int        @id @default(autoincrement())
+  name          String     @db.VarChar(200)
+  department_id Int
+  Department    Department @relation(fields: [department_id], references: [id])
+  created_ts    DateTime   @default(now()) @db.Timestamptz(6)
+  updated_ts    DateTime   @updatedAt @db.Timestamptz(6)
+  Skills        Skills[]
+}
+
+model SkillsExpertiseLevels {
+  id                   Int                    @id @default(autoincrement())
+  level                String                 @db.VarChar(100)
+  created_ts           DateTime               @default(now()) @db.Timestamptz(6)
+  updated_ts           DateTime               @updatedAt @db.Timestamptz(6)
+  EmployeeSkill        EmployeeSkill[]
+  ProjectEmployeeSkill ProjectEmployeeSkill[]
+}
+
+model ProjectEmployeeSkill {
+  id                         Int                   @id @default(autoincrement())
+  project_employee_id        Int
+  skill_id                   Int
+  skills_expertise_levels_id Int
+  created_ts                 DateTime              @default(now()) @db.Timestamptz(6)
+  updated_ts                 DateTime              @updatedAt @db.Timestamptz(6)
+  ProjectEmployee            ProjectEmployee       @relation(fields: [project_employee_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "ProjectEmployeeSkill_project_employee_id_4092cbfa_fk_ProjectEm")
+  skill                      Skills                @relation(fields: [skill_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "ProjectEmployeeSkill_skill_id_fd523680_fk_Skills_id")
+  skills_expertise_levels    SkillsExpertiseLevels @relation(fields: [skills_expertise_levels_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "ProjectEmployeeSkill_skills_expertise_lev_a99298ee_fk_SkillsExp")
+
+  @@unique([project_employee_id, skill_id, skills_expertise_levels_id], map: "ProjectEmployeeSkill_project_employee_id_skil_9323e8b7_uniq")
+  @@index([project_employee_id], map: "ProjectEmployeeSkill_project_employee_id_4092cbfa")
+  @@index([skill_id], map: "ProjectEmployeeSkill_skill_id_fd523680")
+  @@index([skills_expertise_levels_id], map: "ProjectEmployeeSkill_skills_expertise_levels_id_a99298ee")
+}
+
+model History {
+  id             Int       @id @default(autoincrement())
+  updated_column String    @db.VarChar(200)
+  updated_by     String?   @db.VarChar(100)
+  old_data       String?
+  new_data       String?
+  action_type    String?   @db.VarChar(25)
+  employee_id    String?   @db.VarChar(100)
+  project_id     String?   @db.VarChar(100)
+  is_protected   Boolean   @default(false)
+  created_ts     DateTime  @default(now()) @db.Timestamptz(6)
+  updated_ts     DateTime  @updatedAt @db.Timestamptz(6)
+  employee       Employee? @relation(fields: [employee_id], references: [employee_id], onDelete: NoAction, onUpdate: NoAction, map: "History_employee_id_3a5a7ecb_fk_Employee_employee_id")
+  project        Project?  @relation(fields: [project_id], references: [project_id], onDelete: NoAction, onUpdate: NoAction, map: "History_project_id_4342cc77_fk_Project_project_id")
+
+  @@index([employee_id], map: "History_employee_id_3a5a7ecb")
+  @@index([employee_id], map: "History_employee_id_3a5a7ecb_like")
+  @@index([project_id], map: "History_project_id_4342cc77")
+  @@index([project_id], map: "History_project_id_4342cc77_like")
+}
+
+model Task {
+  task_id    String      @id @db.VarChar(100)
+  task_name  String      @db.VarChar(200)
+  billable   Boolean
+  project_id String?     @db.VarChar(100)
+  created_ts DateTime    @default(now()) @db.Timestamptz(6)
+  updated_ts DateTime    @updatedAt @db.Timestamptz(6)
+  project    Project?    @relation(fields: [project_id], references: [project_id], onDelete: NoAction, onUpdate: NoAction, map: "Task_project_id_2d1fd6af_fk_Project_project_id")
+  TimeEntry  TimeEntry[]
+
+  @@index([project_id], map: "Task_project_id_2d1fd6af")
+  @@index([project_id], map: "Task_project_id_2d1fd6af_like")
+  @@index([task_id], map: "Task_task_id_244203d5_like")
+}
+
+/// This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.
+
+/// This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.
+model PerPersonExpectedHour {
+  id             Int        @id @default(autoincrement())
+  month_year     String     @db.VarChar(200)
+  number_of_days Int
+  total_hours    Int
+  working_days   DateTime[] @db.Date
+  employee_id    String?    @db.VarChar(100)
+  created_ts     DateTime   @db.Timestamptz(6)
+  updated_ts     DateTime   @db.Timestamptz(6)
+  Employee       Employee?  @relation(fields: [employee_id], references: [employee_id], onDelete: NoAction, onUpdate: NoAction, map: "PerPersonExpectedHou_employee_id_4cd3d96f_fk_Employee_")
+
+  @@unique([employee_id, month_year], map: "PerPersonExpectedHour_employee_id_month_year_9efc7de5_uniq")
+  @@index([employee_id], map: "PerPersonExpectedHour_employee_id_4cd3d96f")
+  @@index([employee_id], map: "PerPersonExpectedHour_employee_id_4cd3d96f_like")
+  @@index([number_of_days], map: "PerPersonExpectedHour_number_of_days_13d6680c")
+}
+
+model SyncButtonStatus {
+  id              Int       @id @default(autoincrement())
+  is_sync_enabled Boolean
+  start_date      DateTime? @db.Date
+  end_date        DateTime? @db.Date
+  created_ts      DateTime  @db.Timestamptz(6)
+  updated_ts      DateTime  @db.Timestamptz(6)
+}
+
+/// This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.
+model TimeEntry {
+  time_entry_id String    @id @db.VarChar(100)
+  description   String
+  start_time    DateTime  @db.Timestamptz(6)
+  end_time      DateTime  @db.Timestamptz(6)
+  duration      String    @db.VarChar(100)
+  billable      Boolean
+  employee_id   String?   @db.VarChar(100)
+  project_id    String?   @db.VarChar(100)
+  task_id       String?   @db.VarChar(100)
+  created_ts    DateTime  @db.Timestamptz(6)
+  updated_ts    DateTime  @db.Timestamptz(6)
+  Employee      Employee? @relation(fields: [employee_id], references: [employee_id], onDelete: NoAction, onUpdate: NoAction, map: "TimeEntry_employee_id_0bfcd508_fk_Employee_employee_id")
+  Project       Project?  @relation(fields: [project_id], references: [project_id], onDelete: NoAction, onUpdate: NoAction, map: "TimeEntry_project_id_89ad5ab3_fk_Project_project_id")
+  Task          Task?     @relation(fields: [task_id], references: [task_id], onDelete: NoAction, onUpdate: NoAction, map: "TimeEntry_task_id_608f12ce_fk_Task_task_id")
+
+  @@index([employee_id], map: "TimeEntry_employee_id_0bfcd508")
+  @@index([employee_id], map: "TimeEntry_employee_id_0bfcd508_like")
+  @@index([project_id], map: "TimeEntry_project_id_89ad5ab3")
+  @@index([project_id], map: "TimeEntry_project_id_89ad5ab3_like")
+  @@index([task_id], map: "TimeEntry_task_id_608f12ce")
+  @@index([task_id], map: "TimeEntry_task_id_608f12ce_like")
+  @@index([time_entry_id], map: "TimeEntry_time_entry_id_01d169a8_like")
+}
+
+/// This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.
+model WeeklyTimeSheetEntries {
+  id             Int       @id @default(autoincrement())
+  month_year     String    @db.VarChar(200)
+  start_date     DateTime  @db.Date
+  end_date       DateTime  @db.Date
+  clocked_hours  Decimal   @db.Decimal(6, 2)
+  expected_hours Int
+  is_defaulter   Boolean
+  employee_id    String?   @db.VarChar(100)
+  created_ts     DateTime  @db.Timestamptz(6)
+  updated_ts     DateTime  @db.Timestamptz(6)
+  Employee       Employee? @relation(fields: [employee_id], references: [employee_id], onDelete: NoAction, onUpdate: NoAction, map: "WeeklyTimeSheetEntri_employee_id_c0b80b12_fk_Employee_")
+
+  @@unique([employee_id, start_date, end_date], map: "WeeklyTimeSheetEntries_employee_id_start_date_e_6097e8e3_uniq")
+  @@index([employee_id], map: "WeeklyTimeSheetEntries_employee_id_c0b80b12")
+  @@index([employee_id], map: "WeeklyTimeSheetEntries_employee_id_c0b80b12_like")
+}
+
+model WorkDay {
+  id             Int        @id @default(autoincrement())
+  month_year     String     @db.VarChar(200)
+  number_of_days Int
+  total_hours    Int
+  working_days   DateTime[] @db.Date
+  created_ts     DateTime   @db.Timestamptz(6)
+  updated_ts     DateTime   @db.Timestamptz(6)
+
+  @@index([month_year], map: "WorkDay_month_year_ebc1f7bb")
+  @@index([month_year], map: "WorkDay_month_year_ebc1f7bb_like")
+  @@index([number_of_days], map: "WorkDay_number_of_days_7b6e4348")
+}
+
+model EmployeeWorkMode {
+  id                  Int       @id @default(autoincrement())
+  employee_id         String
+  date                DateTime  @db.Date
+  work_mode           String
+  in_office_work_days Int
+  created_ts          DateTime  @default(now()) @db.Timestamptz(6)
+  updated_ts          DateTime  @updatedAt @db.Timestamptz(6)
+  employee            Employee? @relation(fields: [employee_id], references: [employee_id], onDelete: NoAction, onUpdate: NoAction, map: "History_employee_id_3a5a7ecb_fk_Employee_employee_id")
+}
+
+model Attendance {
+  id         String   @id @default(uuid()) @db.Uuid
+  keka_id    String
+  date       DateTime @db.Date
+  status     Boolean
+  created_ts DateTime @default(now()) @db.Timestamptz(6)
+  updated_ts DateTime @updatedAt @db.Timestamptz(6)
+
+  attendanceLogs     AttendanceLogs[] @relation("AttendanceToLogs")
+  employee           Employee         @relation(fields: [keka_id], references: [keka_id], onDelete: Cascade)
+  Employee           Employee[]       @relation("EmployeeToAttendance")
+  AttendanceType     AttendanceType?  @relation(fields: [attendance_type_id], references: [id])
+  attendance_type_id Int
+
+  @@unique([keka_id, date])
+}
+
+model AttendanceLogs {
+  id         String   @id @default(uuid()) @db.Uuid
+  keka_id    String
+  date       DateTime @db.Date
+  time_in    DateTime @db.Timetz()
+  time_out   DateTime @db.Timetz()
+  source     Boolean
+  created_ts DateTime @default(now()) @db.Timestamptz(6)
+  updated_ts DateTime @updatedAt @db.Timestamptz(6)
+
+  attendance Attendance @relation("AttendanceToLogs", fields: [keka_id, date], references: [keka_id, date])
+
+  @@unique([keka_id, date])
+}
+
+model AttendanceType {
+  id         Int          @id @default(autoincrement())
+  name       String       @db.VarChar(200)
+  created_ts DateTime     @default(now()) @db.Timestamptz(6)
+  updated_ts DateTime     @updatedAt @db.Timestamptz(6)
+  Attendance Attendance[]
+}
+
+model Certificate {
+  id                      Int                     @id @default(autoincrement())
+  name                    String                  @unique
+  course_url              String                  @db.VarChar(200)
+  certificate_state       String                  @default("Under Review")
+  certificate_status      String                  @default("Available")
+  requested_by            String
+  authorized_by           String?
+  authorizer_comment      String?                 @db.VarChar(255)
+  requester_comment       String                  @db.VarChar(255)
+  requested_at            DateTime                @db.Timestamptz(6)
+  authorized_at           DateTime?               @db.Timestamptz(6)
+  created_ts              DateTime                @default(now()) @db.Timestamptz(6)
+  updated_ts              DateTime                @updatedAt @db.Timestamptz(6)
+  organization_id         Int
+  CertificateOrganization CertificateOrganization @relation(fields: [organization_id], references: [id])
+
+  requester_employee  Employee  @relation("CertificateRequester", fields: [requested_by], references: [employee_id])
+  authorizer_employee Employee? @relation("CertificateAuthorizer", fields: [authorized_by], references: [employee_id])
+
+  EmployeeCertificate EmployeeCertificate[]
+}
+
+model CertificateOrganization {
+  id          Int           @id @default(autoincrement())
+  name        String        @unique
+  logo        String?       @db.VarChar(2000)
+  created_ts  DateTime      @default(now()) @db.Timestamptz(6)
+  updated_ts  DateTime      @updatedAt @db.Timestamptz(6)
+  Certificate Certificate[]
+}
+
+model EmployeeCertificate {
+  id                 Int       @id @default(autoincrement())
+  employee_id        String    @db.VarChar(200)
+  certificate_id     Int
+  issue_date         DateTime? @db.Date
+  expiry_date        DateTime? @db.Date
+  certificate_number String?   @db.VarChar(200)
+  url                String    @db.VarChar(300)
+  created_ts         DateTime  @default(now()) @db.Timestamptz(6)
+  updated_ts         DateTime  @updatedAt @db.Timestamptz(6)
+
+  certificate Certificate @relation(fields: [certificate_id], references: [id])
+  employee    Employee    @relation(fields: [employee_id], references: [employee_id])
+
+  @@unique([employee_id, certificate_id])
+}
+
+model Notification {
+  id            Int      @id @default(autoincrement())
+  title         String
+  description   String
+  redirect_link String
+  created_ts    DateTime @default(now()) @db.Timestamptz(6)
+  updated_ts    DateTime @updatedAt @db.Timestamptz(6)
+
+  EmployeeNotification EmployeeNotification[]
+}
+
+model EmployeeNotification {
+  id              Int      @id @default(autoincrement())
+  notification_id Int
+  employee_id     String   @db.VarChar(100)
+  is_read         Boolean  @default(false)
+  created_ts      DateTime @default(now()) @db.Timestamptz(6)
+  updated_ts      DateTime @updatedAt @db.Timestamptz(6)
+
+  notification Notification @relation(fields: [notification_id], references: [id], onDelete: Cascade)
+  employee     Employee     @relation(fields: [employee_id], references: [employee_id], onDelete: Cascade)
+
+  @@unique([employee_id, notification_id])
+}
+
+model EmployeeDeviceToken {
+  id           Int      @id @default(autoincrement())
+  employee_id  String   @db.VarChar(100)
+  device_token String
+  device_id    String
+  created_ts   DateTime @default(now()) @db.Timestamptz(6)
+  updated_ts   DateTime @updatedAt @db.Timestamptz(6)
+
+  employee Employee @relation(fields: [employee_id], references: [employee_id], onDelete: Cascade)
+
+  @@unique([employee_id, device_id])
+}
