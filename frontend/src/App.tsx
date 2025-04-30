@@ -1,9 +1,10 @@
 // import FullCalendar from '@fullcalendar/react'
 // import dayGridPlugin from '@fullcalendar/daygrid'
 // import { WeekNumberContainer } from '@fullcalendar/core/internal.js';
-import Calendar  from './component/Calendar';
+// import Calendar from "./component/Calendar";
 import TimeEntry from "./components/TimeEntry";
 import "./App.css";
+import "./index.css"
 
 // export function Calendar() {
 //   return (
@@ -27,8 +28,12 @@ import "./App.css";
 // }
 
 function App() {
-  return (<><Calendar/>
-  <TimeEntry /></>)
+  return (
+    <>
+      {/* <Calendar /> */}
+      <TimeEntry />
+    </>
+  );
 }
 
 export default App;

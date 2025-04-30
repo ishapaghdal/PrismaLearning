@@ -29,6 +29,33 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+// API base URL - this should be configured based on your environment
+const API_BASE_URL = "http://localhost:3000/api"; // Replace with your actual backend URL
+
+// Define types for project and task data from backend
+interface Task {
+  task_id: string;
+  task_name: string;
+  billable: boolean;
+  created_ts: string;
+  updated_ts: string;
+}
+
+interface Project {
+  project_id: string;
+  project_name: string;
+  project_state: string;
+  billable: boolean;
+  start_date: string;
+  end_date: string;
+  type: string;
+  phase: string;
+  is_active: boolean;
+  client_id: string;
+  created_ts: string;
+  updated_ts: string;
+}
+
 const TimeEntry = () => {
   const [date, setDate] = useState<Date>(new Date());
   const [startTime, setStartTime] = useState<string>("10:00");
@@ -37,14 +64,100 @@ const TimeEntry = () => {
   const [project, setProject] = useState<string>("");
   const [timerValue, setTimerValue] = useState<string>("00:00:00");
 
+  // State for projects and tasks data
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [tasks, setTasks] = useState<Record<string, Task[]>>({});
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+
   // Mock data for the week days
   const weekDays = ["M", "T", "W", "T", "F"];
   const currentDayIndex = 3; // Thursday is highlighted in the image
+
+  // Fetch projects when component mounts
+  useEffect(() => {
+    fetchProjects();
+  }, []);
+
+  // Fetch tasks when a project is selected
+  useEffect(() => {
+    if (project) {
+      const selectedProjectId = project.split("-")[0];
+      fetchTasksForProject(selectedProjectId);
+    }
+  }, [project]);
 
   // Calculate time difference when startTime or endTime changes
   useEffect(() => {
     calculateTimeDifference();
   }, [startTime, endTime]);
+
+  // Function to fetch projects from the backend
+  const fetchProjects = async () => {
+    setLoading(true);
+    try {
+      // Use the full URL with the API base
+      const response = await fetch(`${API_BASE_URL}/projects`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        // Required for handling cookies if your API uses authentication
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        throw new Error(
+          `Failed to fetch projects: ${response.status} ${response.statusText}`
+        );
+      }
+
+      const data = await response.json();
+      console.log("Projects fetched:", data);
+      setProjects(data);
+      setLoading(false);
+    } catch (err) {
+      console.error("Error fetching projects:", err);
+      setError(err instanceof Error ? err.message : "Error fetching projects");
+      setLoading(false);
+    }
+  };
+
+  // Function to fetch tasks for a specific project
+  const fetchTasksForProject = async (projectId: string) => {
+    // Check if we already have tasks for this project
+    if (tasks[projectId]) {
+      return;
+    }
+
+    try {
+      // Use the full URL with the API base
+      const response = await fetch(`${API_BASE_URL}/tasks/${projectId}`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        // Required for handling cookies if your API uses authentication
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        throw new Error(
+          `Failed to fetch tasks: ${response.status} ${response.statusText}`
+        );
+      }
+
+      const data = await response.json();
+      console.log(`Tasks for project ${projectId} fetched:`, data);
+
+      setTasks((prev) => ({
+        ...prev,
+        [projectId]: data,
+      }));
+    } catch (err) {
+      console.error(`Error fetching tasks for project ${projectId}:`, err);
+    }
+  };
 
   // Function to calculate the time difference between start and end time
   const calculateTimeDifference = () => {
@@ -93,6 +206,31 @@ const TimeEntry = () => {
     setEndTime(e.target.value);
   };
 
+  // Group projects by type or other criteria to display in dropdown
+  const groupedProjects = projects.reduce(
+    (acc, project) => {
+      const groupName = project.type || "Other";
+      if (!acc[groupName]) {
+        acc[groupName] = [];
+      }
+      acc[groupName].push(project);
+      return acc;
+    },
+    {} as Record<string, Project[]>
+  );
+
+  // Function to get color for project type
+  const getProjectTypeColor = (type: string): string => {
+    const colorMap: Record<string, string> = {
+      Research: "orange",
+      Development: "pink",
+      Design: "purple",
+      // Add more types and colors as needed
+    };
+
+    return colorMap[type] || "gray";
+  };
+
   return (
     <div className="flex flex-col h-screen bg-gray-50">
       {/* Main content */}
@@ -115,85 +253,70 @@ const TimeEntry = () => {
                   <SelectValue placeholder="Project">
                     {project && (
                       <>
-                        {project.startsWith("research") ||
-                        project.startsWith("meetings") ||
-                        project.startsWith("leadership") ||
-                        project.startsWith("design")
-                          ? "Regio: "
-                          : project.startsWith("raapid")
-                            ? "RAAPID: "
-                            : project.startsWith("tc")
-                              ? "Time Companion: "
-                              : ""}
-                        {project === "research"
-                          ? "Research"
-                          : project === "meetings"
-                            ? "Meetings"
-                            : project === "leadership"
-                              ? "Leadership task"
-                              : project === "design"
-                                ? "Design"
-                                : project === "raapid-task1"
-                                  ? "Task 1"
-                                  : project === "raapid-task2"
-                                    ? "Task 2"
-                                    : project === "tc-task1"
-                                      ? "Task 1"
-                                      : project === "tc-task2"
-                                        ? "Task 2"
-                                        : ""}
+                        {
+                          projects.find(
+                            (p) =>
+                              `${p.project_id}-${p.project_name}` ===
+                              project.split("-task")[0]
+                          )?.project_name
+                        }
+                        {project.includes("-task") &&
+                          `: ${project.split("-task")[1]}`}
                       </>
                     )}
                   </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
-                  {/* Regio Project Group */}
-                  <div className="py-2">
-                    <div className="flex items-center px-2 pb-1">
-                      <span className="h-2 w-2 rounded-full bg-orange-500 mr-2"></span>
-                      <span className="font-medium">Regio</span>
+                  {loading ? (
+                    <div className="py-2 px-2 text-center">
+                      Loading projects...
                     </div>
-                    <SelectItem value="research" className="pl-4">
-                      Research
-                    </SelectItem>
-                    <SelectItem value="meetings" className="pl-4">
-                      Meetings
-                    </SelectItem>
-                    <SelectItem value="leadership" className="pl-4">
-                      Leadership task
-                    </SelectItem>
-                    <SelectItem value="design" className="pl-4">
-                      Design
-                    </SelectItem>
-                  </div>
+                  ) : error ? (
+                    <div className="py-2 px-2 text-center text-red-500">
+                      {error}
+                    </div>
+                  ) : projects.length === 0 ? (
+                    <div className="py-2 px-2 text-center">
+                      No projects available
+                    </div>
+                  ) : (
+                    Object.entries(groupedProjects).map(
+                      ([groupName, groupProjects]) => (
+                        <div
+                          key={groupName}
+                          className="py-2 border-t first:border-t-0"
+                        >
+                          <div className="flex items-center px-2 pb-1 pt-1">
+                            <span
+                              className={`h-2 w-2 rounded-full bg-${getProjectTypeColor(groupName)}-500 mr-2`}
+                            ></span>
+                            <span className="font-medium">{groupName}</span>
+                          </div>
+                          {groupProjects.map((proj) => (
+                            <div key={proj.project_id}>
+                              <SelectItem
+                                value={`${proj.project_id}-${proj.project_name}`}
+                                className="pl-4"
+                              >
+                                {proj.project_name}
+                              </SelectItem>
 
-                  {/* RAAPID Project Group */}
-                  <div className="py-2 border-t">
-                    <div className="flex items-center px-2 pb-1 pt-1">
-                      <span className="h-2 w-2 rounded-full bg-pink-500 mr-2"></span>
-                      <span className="font-medium">RAAPID</span>
-                    </div>
-                    <SelectItem value="raapid-task1" className="pl-4">
-                      Task 1
-                    </SelectItem>
-                    <SelectItem value="raapid-task2" className="pl-4">
-                      Task 2
-                    </SelectItem>
-                  </div>
-
-                  {/* Time Companion Project Group */}
-                  <div className="py-2 border-t">
-                    <div className="flex items-center px-2 pb-1 pt-1">
-                      <span className="h-2 w-2 rounded-full bg-purple-500 mr-2"></span>
-                      <span className="font-medium">Time Companion</span>
-                    </div>
-                    <SelectItem value="tc-task1" className="pl-4">
-                      Task 1
-                    </SelectItem>
-                    <SelectItem value="tc-task2" className="pl-4">
-                      Task 2
-                    </SelectItem>
-                  </div>
+                              {/* Show tasks if they exist for this project */}
+                              {tasks[proj.project_id]?.map((task) => (
+                                <SelectItem
+                                  key={task.task_id}
+                                  value={`${proj.project_id}-${proj.project_name}-task${task.task_id}`}
+                                  className="pl-8 text-sm"
+                                >
+                                  {task.task_name}
+                                </SelectItem>
+                              ))}
+                            </div>
+                          ))}
+                        </div>
+                      )
+                    )
+                  )}
                 </SelectContent>
               </Select>
 
