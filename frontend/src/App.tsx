@@ -34,8 +34,8 @@ function App() {
   return (
     <>
       {/* <Calendar /> */}
-      <div className="flex min-h-screen flex-col">
-        <CalendarView />
+      <div className="flex flex-col">
+        {/* <CalendarView /> */}
         <TimeEntry />
       </div>
     </>

@@ -5,30 +5,17 @@ import FullCalendar from "@fullcalendar/react";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { CalendarIcon } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { format } from "date-fns";
-import { Calendar } from "@/components/ui/calendar";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import ProjectSidebar from "./project-sidebar";
 import EventModal from "./event-modal";
 import type { Event } from "@/types/event";
 import { gapi } from "gapi-script";
+import TimeEntry from "./TimeEntry";
 const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 const API_KEY = import.meta.env.VITE_GOOGLE_API_KEY;
 const SCOPES = "https://www.googleapis.com/auth/calendar";
 
 export default function CalendarView() {
   const [events, setEvents] = useState<Event[]>([]);
-  const [date, setDate] = useState<Date | undefined>(new Date());
-  const [startTime, setStartTime] = useState("03:00");
-  const [endTime, setEndTime] = useState("10:10");
-  const [secondStartTime, setSecondStartTime] = useState("11:10");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [view, setView] = useState("timeGridDay");
@@ -236,8 +223,8 @@ export default function CalendarView() {
               timeZone: "UTC",
             },
             attendees: [
-              { email: "kashish@aubergine.co" },
               { email: "preet@aubergine.co" },
+              {email : 'hardik.s@aubergine.co'}
             ],
           },
         });
@@ -301,74 +288,6 @@ export default function CalendarView() {
       <div className="flex h-screen">
         <ProjectSidebar />
         <div className="flex-1 flex flex-col">
-          <header className="p-4 border-b">
-            <h1 className="text-2xl font-bold mb-4">Calendar</h1>
-            <div className="flex flex-wrap gap-2 items-center">
-              <Input
-                className="max-w-xs"
-                placeholder="Look everywhere for calendar view"
-                type="search"
-              />
-              <div className="flex items-center gap-2 bg-purple-100 text-purple-800 px-3 py-1 rounded-md">
-                <span className="w-2 h-2 rounded-full bg-purple-500"></span>
-                <span>Capstone 2023 - Meeting</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Input
-                  type="time"
-                  value={startTime}
-                  onChange={(e) => setStartTime(e.target.value)}
-                  className="w-24"
-                />
-                <span>-</span>
-                <Input
-                  type="time"
-                  value={endTime}
-                  onChange={(e) => setEndTime(e.target.value)}
-                  className="w-24"
-                />
-                <span>-</span>
-                <Input
-                  type="time"
-                  value={secondStartTime}
-                  onChange={(e) => setSecondStartTime(e.target.value)}
-                  className="w-24"
-                />
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant={"outline"}
-                      className={cn(
-                        "w-[180px] justify-start text-left font-normal",
-                        !date && "text-muted-foreground"
-                      )}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {date ? (
-                        format(date, "MM/dd/yy")
-                      ) : (
-                        <span>Pick a date</span>
-                      )}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
-                    <Calendar
-                      mode="single"
-                      selected={date}
-                      onSelect={setDate}
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
-                <Button
-                  className="bg-blue-600 hover:bg-blue-700"
-                  onClick={() => setIsModalOpen(true)}
-                >
-                  Add
-                </Button>
-              </div>
-            </div>
-          </header>
 
           <div className="flex items-center gap-2 p-2 border-b">
             <Button
@@ -400,6 +319,19 @@ export default function CalendarView() {
                 center: "title",
                 right: "",
               }}
+              nowIndicator={true}
+              dragScroll
+              // duration={}
+              // eventDragStart={}
+              // eventDragStop={}
+              // eventDurationEditable
+              // eventMouseEnter={}
+              // eventOrder={}
+              //  eventOverlap
+              //  eventResizeStart={}
+              //  eventResizeStop={}
+               eventTextColor="black"
+               
               slotMinTime="00:00:00"
               slotMaxTime="23:59:59"
               selectable={true}

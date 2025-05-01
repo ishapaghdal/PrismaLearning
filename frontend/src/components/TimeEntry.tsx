@@ -3,6 +3,7 @@ import TimeEntryForm from "./EntryForm";
 import ProgressTracker from "./ProgressTracker";
 import LoggedHoursDisplay from "./LoggedHours";
 import { format } from "date-fns";
+import CalendarView from "./Calendar-view";
 
 // Define types for project and task data that can be shared
 export interface Task {
@@ -120,7 +121,7 @@ const TimeEntry = () => {
     groupedEntries[today]?.totalDuration || "00:00:00";
 
   return (
-    <div className="flex flex-col h-screen bg-gray-50">
+    <div className="flex flex-col bg-gray-50">
       {/* Main content */}
       <div className="flex-1 overflow-auto">
         <div className="max-w-6xl mx-auto p-4">
@@ -137,6 +138,7 @@ const TimeEntry = () => {
             entries={todaysEntries}
             totalHours={todaysTotalDuration}
           />
+          <CalendarView/>
         </div>
       </div>
     </div>
