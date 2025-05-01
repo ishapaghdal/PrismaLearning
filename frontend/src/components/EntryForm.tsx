@@ -31,6 +31,8 @@ const API_BASE_URL = "http://localhost:3000/api"; // Replace with your actual ba
 
 interface TimeEntryFormProps {
   onAddEntry: (entry: Omit<TimeEntryData, "id" | "createdAt">) => void;
+  selectedDate: Date;
+  onDateChange: (date: Date) => void;
 }
 
 interface SelectedProject {
@@ -46,8 +48,11 @@ interface ValidationErrors {
   time?: string;
 }
 
-const TimeEntryForm = ({ onAddEntry }: TimeEntryFormProps) => {
-  const [date, setDate] = useState<Date>(new Date());
+const TimeEntryForm = ({
+  onAddEntry,
+  selectedDate,
+  onDateChange,
+}: TimeEntryFormProps) => {
   const [startTime, setStartTime] = useState<string>("10:00");
   const [endTime, setEndTime] = useState<string>("10:10");
   const [description, setDescription] = useState<string>("");
@@ -243,7 +248,7 @@ const TimeEntryForm = ({ onAddEntry }: TimeEntryFormProps) => {
         startTime,
         endTime,
         duration: timerValue,
-        date,
+        date: selectedDate,
       };
 
       onAddEntry(newEntry);
@@ -315,6 +320,13 @@ const TimeEntryForm = ({ onAddEntry }: TimeEntryFormProps) => {
     }
 
     return selectedProject.projectName;
+  };
+
+  // Handle date change from calendar
+  const handleDateChange = (date: Date | undefined) => {
+    if (date) {
+      onDateChange(date);
+    }
   };
 
   return (
@@ -463,14 +475,14 @@ const TimeEntryForm = ({ onAddEntry }: TimeEntryFormProps) => {
               className="w-[120px] justify-start text-left font-normal"
             >
               <CalendarIcon className="mr-2 h-4 w-4" />
-              {format(date, "MM/dd/yy")}
+              {format(selectedDate, "MM/dd/yy")}
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-auto p-0">
             <Calendar
               mode="single"
-              selected={date}
-              onSelect={(date) => date && setDate(date)}
+              selected={selectedDate}
+              onSelect={handleDateChange}
               initialFocus
             />
           </PopoverContent>
