@@ -32,11 +32,10 @@ function App() {
   return (
     <>
       {/* <Calendar /> */}
-      <div className="bg-amber-200">enwfnwe</div>
       <div className="flex min-h-screen flex-col">
         <CalendarView />
+        <TimeEntry />
       </div>
-      {/* <TimeEntry /> */}
     </>
   );
 }
