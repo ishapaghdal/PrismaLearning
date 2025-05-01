@@ -1,11 +1,16 @@
 {
   "name": "prisma_postgresql",
   "version": "1.0.0",
-  "main": "server.js",
+  "main": "src/index.ts",
   "type": "module",
   "scripts": {
-    "start": "node server.js",
-    "server": "nodemon server.js"
+    "build": "tsc",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "prepare": "husky install",
+    "start": "npx tsx src/index.ts",
+    "dev": "npx tsx src/index.ts",
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
   "author": "",
@@ -13,8 +18,22 @@
   "description": "",
   "dependencies": {
     "@prisma/client": "^6.4.1",
-    "dotenv": "^16.4.7",
-    "express": "^4.21.2",
+    "cors": "^2.8.5",
     "prisma": "^6.4.1"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/express": "^5.0.1",
+    "@types/node": "^22.15.3",
+    "dotenv": "^16.5.0",
+    "eslint": "^9.25.1",
+    "express": "^5.1.0",
+    "install": "^0.13.0",
+    "nodemon": "^3.1.10",
+    "npm": "^11.3.0",
+    "prettier": "^3.5.3",
+    "ts-node": "^10.9.2",
+    "tsx": "^4.19.4",
+    "typescript": "^5.8.3"
   }
 }
