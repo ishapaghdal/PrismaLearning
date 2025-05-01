@@ -1,60 +1,64 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { format } from "date-fns";
-import { CalendarIcon, Clock, MoreVertical } from "lucide-react";
+import {
+  CalendarIcon,
+  Clock,
+  MoreVertical,
+  ChevronDown,
+  AlertCircle,
+} from "lucide-react";
+import { TimeEntryData, Project, Task } from "./TimeEntry"; // Import types from parent component
 
 // API base URL - this should be configured based on your environment
 const API_BASE_URL = "http://localhost:3000/api"; // Replace with your actual backend URL
 
-// Define types for project and task data from backend
-interface Task {
-  task_id: string;
-  task_name: string;
-  billable: boolean;
-  created_ts: string;
-  updated_ts: string;
-}
-
-interface Project {
-  project_id: string;
-  project_name: string;
-  project_state: string;
-  billable: boolean;
-  start_date: string;
-  end_date: string;
-  type: string;
-  phase: string;
-  is_active: boolean;
-  client_id: string;
-  created_ts: string;
-  updated_ts: string;
-}
-
 interface TimeEntryFormProps {
-  // You can add props as needed
+  onAddEntry: (entry: Omit<TimeEntryData, "id" | "createdAt">) => void;
 }
 
-const TimeEntryForm = ({}: TimeEntryFormProps) => {
+interface SelectedProject {
+  projectId: string;
+  projectName: string;
+  taskId?: string;
+  taskName?: string;
+}
+
+interface ValidationErrors {
+  description?: string;
+  project?: string;
+  time?: string;
+}
+
+const TimeEntryForm = ({ onAddEntry }: TimeEntryFormProps) => {
   const [date, setDate] = useState<Date>(new Date());
   const [startTime, setStartTime] = useState<string>("10:00");
   const [endTime, setEndTime] = useState<string>("10:10");
-  const [task, setTask] = useState<string>("");
-  const [project, setProject] = useState<string>("");
+  const [description, setDescription] = useState<string>("");
+  const [selectedProject, setSelectedProject] =
+    useState<SelectedProject | null>(null);
   const [timerValue, setTimerValue] = useState<string>("00:00:00");
+  const [dropdownOpen, setDropdownOpen] = useState<boolean>(false);
+  const [validationErrors, setValidationErrors] = useState<ValidationErrors>(
+    {}
+  );
+  const [showErrors, setShowErrors] = useState<boolean>(false);
 
   // State for projects and tasks data
   const [projects, setProjects] = useState<Project[]>([]);
@@ -67,18 +71,26 @@ const TimeEntryForm = ({}: TimeEntryFormProps) => {
     fetchProjects();
   }, []);
 
-  // Fetch tasks when a project is selected
+  // Pre-fetch tasks for all projects to improve UX
   useEffect(() => {
-    if (project) {
-      const selectedProjectId = project.split("-")[0];
-      fetchTasksForProject(selectedProjectId);
+    if (projects.length > 0) {
+      projects.forEach((project) => {
+        fetchTasksForProject(project.project_id);
+      });
     }
-  }, [project]);
+  }, [projects]);
 
   // Calculate time difference when startTime or endTime changes
   useEffect(() => {
     calculateTimeDifference();
   }, [startTime, endTime]);
+
+  // Reset validation errors when input changes
+  useEffect(() => {
+    if (showErrors) {
+      validateForm();
+    }
+  }, [description, selectedProject, startTime, endTime, showErrors]);
 
   // Function to fetch projects from the backend
   const fetchProjects = async () => {
@@ -176,7 +188,9 @@ const TimeEntryForm = ({}: TimeEntryFormProps) => {
       const seconds = Math.floor((diffMs % (1000 * 60)) / 1000);
 
       // Format as HH:MM:SS
-      const formattedTime = `${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
+      const formattedTime = `${hours.toString().padStart(2, "0")}:${minutes
+        .toString()
+        .padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
       setTimerValue(formattedTime);
     } catch (error) {
       console.error("Error calculating time difference:", error);
@@ -192,6 +206,55 @@ const TimeEntryForm = ({}: TimeEntryFormProps) => {
   // Handle end time change
   const handleEndTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setEndTime(e.target.value);
+  };
+
+  // Function to validate the form
+  const validateForm = (): boolean => {
+    const errors: ValidationErrors = {};
+
+    if (!description.trim()) {
+      errors.description = "Please enter what you are working on";
+    }
+
+    if (!selectedProject) {
+      errors.project = "Please select a project";
+    }
+
+    if (timerValue === "00:00:00") {
+      errors.time = "Please enter a valid time range";
+    }
+
+    setValidationErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  // Function to handle form submission
+  const handleAddEntry = () => {
+    setShowErrors(true);
+    const isValid = validateForm();
+
+    if (isValid) {
+      const newEntry: Omit<TimeEntryData, "id" | "createdAt"> = {
+        description,
+        projectId: selectedProject!.projectId,
+        projectName: selectedProject!.projectName,
+        taskId: selectedProject?.taskId,
+        taskName: selectedProject?.taskName,
+        startTime,
+        endTime,
+        duration: timerValue,
+        date,
+      };
+
+      onAddEntry(newEntry);
+
+      // Reset form
+      setDescription("");
+      setStartTime("10:00");
+      setEndTime("10:10");
+      setSelectedProject(null);
+      setShowErrors(false);
+    }
   };
 
   // Group projects by type or other criteria to display in dropdown
@@ -219,97 +282,175 @@ const TimeEntryForm = ({}: TimeEntryFormProps) => {
     return colorMap[type] || "gray";
   };
 
+  // Function to handle project selection
+  const handleProjectSelect = (project: Project) => {
+    setSelectedProject({
+      projectId: project.project_id,
+      projectName: project.project_name,
+    });
+
+    // Ensure tasks for this project are fetched
+    if (!tasks[project.project_id]) {
+      fetchTasksForProject(project.project_id);
+    }
+  };
+
+  // Function to handle task selection
+  const handleTaskSelect = (project: Project, task: Task) => {
+    setSelectedProject({
+      projectId: project.project_id,
+      projectName: project.project_name,
+      taskId: task.task_id,
+      taskName: task.task_name,
+    });
+    setDropdownOpen(false);
+  };
+
+  // Render the display value for the project selector
+  const renderProjectSelectorValue = () => {
+    if (!selectedProject) return "Select Project";
+
+    if (selectedProject.taskName) {
+      return `${selectedProject.projectName}: ${selectedProject.taskName}`;
+    }
+
+    return selectedProject.projectName;
+  };
+
   return (
     <div className="bg-white rounded-lg p-4 shadow-sm mb-6">
       <div className="flex flex-wrap gap-2 items-center">
-        <Input
-          placeholder="What are you working on?"
-          value={task}
-          onChange={(e) => setTask(e.target.value)}
-          className="flex-1 min-w-[200px]"
-        />
+        <div className="flex-1 min-w-[200px] relative">
+          <Input
+            placeholder="What are you working on?"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            className={`w-full ${
+              validationErrors.description && showErrors
+                ? "border-red-500 focus:ring-red-500"
+                : ""
+            }`}
+          />
+          {validationErrors.description && showErrors && (
+            <div className="text-red-500 text-xs mt-1 flex items-center">
+              <AlertCircle className="h-3 w-3 mr-1" />
+              {validationErrors.description}
+            </div>
+          )}
+        </div>
 
-        <Select value={project} onValueChange={setProject}>
-          <SelectTrigger className="w-[150px]">
-            <SelectValue placeholder="Project">
-              {project && (
-                <>
-                  {
-                    projects.find(
-                      (p) =>
-                        `${p.project_id}-${p.project_name}` ===
-                        project.split("-task")[0]
-                    )?.project_name
-                  }
-                  {project.includes("-task") &&
-                    `: ${project.split("-task")[1]}`}
-                </>
-              )}
-            </SelectValue>
-          </SelectTrigger>
-          <SelectContent>
-            {loading ? (
-              <div className="py-2 px-2 text-center">Loading projects...</div>
-            ) : error ? (
-              <div className="py-2 px-2 text-center text-red-500">{error}</div>
-            ) : projects.length === 0 ? (
-              <div className="py-2 px-2 text-center">No projects available</div>
-            ) : (
-              Object.entries(groupedProjects).map(
-                ([groupName, groupProjects]) => (
-                  <div
-                    key={groupName}
-                    className="py-2 border-t first:border-t-0"
-                  >
-                    <div className="flex items-center px-2 pb-1 pt-1">
-                      <span
-                        className={`h-2 w-2 rounded-full bg-${getProjectTypeColor(groupName)}-500 mr-2`}
-                      ></span>
-                      <span className="font-medium">{groupName}</span>
-                    </div>
-                    {groupProjects.map((proj) => (
-                      <div key={proj.project_id}>
-                        <SelectItem
-                          value={`${proj.project_id}-${proj.project_name}`}
-                          className="pl-4"
-                        >
-                          {proj.project_name}
-                        </SelectItem>
-
-                        {/* Show tasks if they exist for this project */}
-                        {tasks[proj.project_id]?.map((task) => (
-                          <SelectItem
-                            key={task.task_id}
-                            value={`${proj.project_id}-${proj.project_name}-task${task.task_id}`}
-                            className="pl-8 text-sm"
-                          >
-                            {task.task_name}
-                          </SelectItem>
-                        ))}
+        <div className="relative">
+          <DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="outline"
+                className={`w-[180px] justify-between text-left font-normal overflow-hidden text-ellipsis whitespace-nowrap ${
+                  validationErrors.project && showErrors
+                    ? "border-red-500 focus:ring-red-500"
+                    : ""
+                }`}
+              >
+                <span className="truncate">{renderProjectSelectorValue()}</span>
+                <ChevronDown className="h-4 w-4 ml-2 shrink-0" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="w-[300px] max-h-[400px] overflow-y-auto">
+              {loading ? (
+                <div className="py-2 px-2 text-center">Loading projects...</div>
+              ) : error ? (
+                <div className="py-2 px-2 text-center text-red-500">
+                  {error}
+                </div>
+              ) : projects.length === 0 ? (
+                <div className="py-2 px-2 text-center">
+                  No projects available
+                </div>
+              ) : (
+                Object.entries(groupedProjects).map(
+                  ([groupName, groupProjects]) => (
+                    <div key={groupName} className="border-b last:border-b-0">
+                      <div className="flex items-center px-2 py-1">
+                        <div
+                          className={`h-2 w-2 rounded-full bg-${getProjectTypeColor(
+                            groupName
+                          )}-500 mr-2`}
+                        ></div>
+                        <span className="font-medium">{groupName}</span>
                       </div>
-                    ))}
-                  </div>
+
+                      {groupProjects.map((project) => (
+                        <DropdownMenuSub key={project.project_id}>
+                          <DropdownMenuSubTrigger
+                            className="pl-4 w-full text-left"
+                            onClick={() => handleProjectSelect(project)}
+                          >
+                            {project.project_name}
+                          </DropdownMenuSubTrigger>
+                          <DropdownMenuSubContent className="min-w-[200px]">
+                            {tasks[project.project_id] ? (
+                              tasks[project.project_id].length > 0 ? (
+                                tasks[project.project_id].map((task) => (
+                                  <DropdownMenuItem
+                                    key={task.task_id}
+                                    onClick={() =>
+                                      handleTaskSelect(project, task)
+                                    }
+                                  >
+                                    {task.task_name}
+                                  </DropdownMenuItem>
+                                ))
+                              ) : (
+                                <div className="py-2 px-3 text-gray-500">
+                                  No tasks available
+                                </div>
+                              )
+                            ) : (
+                              <div className="py-2 px-3 text-gray-500">
+                                Loading tasks...
+                              </div>
+                            )}
+                          </DropdownMenuSubContent>
+                        </DropdownMenuSub>
+                      ))}
+                    </div>
+                  )
                 )
-              )
-            )}
-          </SelectContent>
-        </Select>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+          {validationErrors.project && showErrors && (
+            <div className="text-red-500 text-xs mt-1 flex items-center">
+              <AlertCircle className="h-3 w-3 mr-1" />
+              {validationErrors.project}
+            </div>
+          )}
+        </div>
 
-        <Input
-          type="time"
-          value={startTime}
-          onChange={handleStartTimeChange}
-          className="w-[100px]"
-        />
+        <div className="flex items-center space-x-2">
+          <Input
+            type="time"
+            value={startTime}
+            onChange={handleStartTimeChange}
+            className={`w-[100px] ${
+              validationErrors.time && showErrors
+                ? "border-red-500 focus:ring-red-500"
+                : ""
+            }`}
+          />
 
-        <span className="text-gray-400">-</span>
+          <span className="text-gray-400">-</span>
 
-        <Input
-          type="time"
-          value={endTime}
-          onChange={handleEndTimeChange}
-          className="w-[100px]"
-        />
+          <Input
+            type="time"
+            value={endTime}
+            onChange={handleEndTimeChange}
+            className={`w-[100px] ${
+              validationErrors.time && showErrors
+                ? "border-red-500 focus:ring-red-500"
+                : ""
+            }`}
+          />
+        </div>
 
         <div className="w-[100px] px-3 py-2 border rounded-md text-gray-500">
           {timerValue}
@@ -335,7 +476,10 @@ const TimeEntryForm = ({}: TimeEntryFormProps) => {
           </PopoverContent>
         </Popover>
 
-        <Button className="bg-blue-600 hover:bg-blue-700 text-white">
+        <Button
+          className="bg-blue-600 hover:bg-blue-700 text-white"
+          onClick={handleAddEntry}
+        >
           Add
         </Button>
 
@@ -347,6 +491,13 @@ const TimeEntryForm = ({}: TimeEntryFormProps) => {
           <MoreVertical className="h-4 w-4" />
         </Button>
       </div>
+
+      {validationErrors.time && showErrors && (
+        <div className="text-red-500 text-xs mt-2 flex items-center">
+          <AlertCircle className="h-3 w-3 mr-1" />
+          {validationErrors.time}
+        </div>
+      )}
     </div>
   );
 };
