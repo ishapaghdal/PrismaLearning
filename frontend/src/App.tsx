@@ -1,8 +1,11 @@
 // import FullCalendar from '@fullcalendar/react'
 // import dayGridPlugin from '@fullcalendar/daygrid'
 // import { WeekNumberContainer } from '@fullcalendar/core/internal.js';
+import Calendar from "./components/Calendar";
 // import Calendar from "./component/Calendar";
 import TimeEntry from "./components/TimeEntry";
+import CalendarView from "./components/Calendar-view";
+
 import "./App.css";
 import "./index.css"
 
@@ -31,7 +34,10 @@ function App() {
   return (
     <>
       {/* <Calendar /> */}
-      <TimeEntry />
+      <div className="flex flex-col">
+        {/* <CalendarView /> */}
+        <TimeEntry />
+      </div>
     </>
   );
 }

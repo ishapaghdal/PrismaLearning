@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import TimeEntryForm from "./EntryForm";
 import LoggedHoursDisplay from "./LoggedHours";
+import { format } from "date-fns";
+import CalendarView from "./Calendar-view";
 
 // Type definitions
 export interface TimeEntryData {
@@ -97,7 +99,8 @@ const TimeEntry = () => {
         selectedDate={selectedDate}
         onDateChange={setSelectedDate}
       />
-    </div>
+          <CalendarView/>
+          </div>
   );
 };
 
