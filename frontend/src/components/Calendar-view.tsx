@@ -19,10 +19,8 @@ import ProjectSidebar from "./project-sidebar";
 import EventModal from "./event-modal";
 import type { Event } from "@/types/event";
 import { gapi } from "gapi-script";
-
-const CLIENT_ID =
-  "443826232883-sl9m1so9omv5tm0gsfdgt8d3osicop4s.apps.googleusercontent.com";
-const API_KEY = "AIzaSyDJmIOidEDRqHhNkV_7lUgmxBIdhfyvji8";
+const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+const API_KEY = import.meta.env.VITE_GOOGLE_API_KEY;
 const SCOPES = "https://www.googleapis.com/auth/calendar";
 
 export default function CalendarView() {
