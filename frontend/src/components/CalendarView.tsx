@@ -33,99 +33,9 @@ export default function CalendarView() {
           ],
           scope: SCOPES,
         });
-        // .then(() => {
-        //   // Prompt login
-        //   gapi.auth2
-        //     .getAuthInstance()
-        //     .signIn()
-        //     .then(() => {
-        //       // Get events from primary calendar
-        //       gapi.client.calendar.events
-        //         .list({
-        //           calendarId: "primary", // You can use 'isha@aubergine.co' if email calendar is shared
-        //           timeMin: new Date().toISOString(), // Fetch from now
-        //           showDeleted: false,
-        //           singleEvents: true,
-        //           maxResults: 10,
-        //           orderBy: "startTime",
-        //         })
-        //         .then((response: any) => {
-        //           const fetchedEvents = response.result.items.map(
-        //             (event: any) => ({
-        //               id: event.id,
-        //               title: event.summary,
-        //               start: event.start.dateTime || event.start.date, // Fallback for all-day
-        //               end: event.end.dateTime || event.end.date,
-        //               backgroundColor: "#e0f7fa",
-        //               borderColor: "#00acc1",
-        //               textColor: "#006064",
-        //             })
-        //           );
-        //           setEvents(fetchedEvents);
-        //         });
-        //     });
-        // });
-
-        // const fetchEvents = async () => {
-        // try {
-        //   const response = await fetch("/api/events");
-        //   const data = await response.json();
-        //   setEvents(data);
-        // } catch (error) {
-        //   console.error("Error fetching events:", error);
-        //   // Use sample data for demonstration
-        //   setEvents([
-        //     {
-        //       id: "1",
-        //       title: "Components - Profile",
-        //       start: "2023-03-17T08:30:00",
-        //       end: "2023-03-17T09:30:00",
-        //       backgroundColor: "#f0e6ff",
-        //       borderColor: "#d4bfff",
-        //       textColor: "#5e35b1",
-        //     },
-        //     {
-        //       id: "2",
-        //       title: "Components - Profile",
-        //       start: "2023-03-17T10:30:00",
-        //       end: "2023-03-17T11:30:00",
-        //       backgroundColor: "#ffebee",
-        //       borderColor: "#ffcdd2",
-        //       textColor: "#c62828",
-        //     },
-        //     {
-        //       id: "3",
-        //       title: "Components - Profile",
-        //       start: "2023-03-17T12:30:00",
-        //       end: "2023-03-17T13:30:00",
-        //       backgroundColor: "#e3f2fd",
-        //       borderColor: "#bbdefb",
-        //       textColor: "#1565c0",
-        //     },
-        //     {
-        //       id: "4",
-        //       title: "Components - Profile",
-        //       start: "2023-03-17T14:30:00",
-        //       end: "2023-03-17T15:30:00",
-        //       backgroundColor: "#f1f8e9",
-        //       borderColor: "#dcedc8",
-        //       textColor: "#33691e",
-        //     },
-        //     {
-        //       id: "5",
-        //       title: "Components - Profile",
-        //       start: "2023-03-17T16:30:00",
-        //       end: "2023-03-17T17:30:00",
-        //       backgroundColor: "#fff8e1",
-        //       borderColor: "#ffecb3",
-        //       textColor: "#ff6f00",
-        //     },
-        //   ]);
-        // }
       });
     };
     initClient();
-    // gapi.load("client:auth2", initClient);
 
     // fetchEvents()
   }, []);
@@ -319,16 +229,6 @@ export default function CalendarView() {
                 right: "",
               }}
               nowIndicator={true}
-              // dragScroll
-              // duration={}
-              // eventDragStart={}
-              // eventDragStop={}
-              // eventDurationEditable
-              // eventMouseEnter={}
-              // eventOrder={}
-              //  eventOverlap
-              //  eventResizeStart={}
-              //  eventResizeStop={}
               eventTextColor="black"
               slotMinTime="00:00:00"
               slotMaxTime="23:59:59"

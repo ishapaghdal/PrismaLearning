@@ -18,7 +18,8 @@
   "dependencies": {
     "@prisma/client": "^6.4.1",
     "cors": "^2.8.5",
-    "prisma": "^6.4.1"
+    "prisma": "^6.4.1",
+    "uuid": "^11.1.0"
   },
   "devDependencies": {
     "@types/cors": "^2.8.17",
