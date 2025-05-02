@@ -1,20 +1,21 @@
-"use client";
-
 import { useState, useRef, useEffect } from "react";
 import FullCalendar from "@fullcalendar/react";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
 import { Button } from "@/components/ui/button";
-import ProjectSidebar from "./Sidebar";
 import EventModal from "./EventModal";
 import type { Event } from "@/types/event";
 import { gapi } from "gapi-script";
-import TimeEntry from "./TimeEntry";
 const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 const API_KEY = import.meta.env.VITE_GOOGLE_API_KEY;
 const SCOPES = "https://www.googleapis.com/auth/calendar";
+import { TimeEntryData } from "./TimeEntry";
 
-export default function CalendarView() {
+interface CalendarViewProps {
+  entries: TimeEntryData[];
+}
+
+const CalendarView: React.FC<CalendarViewProps> = ({ entries }) => {
   const [events, setEvents] = useState<Event[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
@@ -129,6 +130,20 @@ export default function CalendarView() {
 
     // fetchEvents()
   }, []);
+
+  useEffect(() => {
+    const formattedEvents = entries.map((entry) => ({
+      id: entry.id,
+      title: entry.description,
+      start: new Date(`${entry.date.toDateString()} ${entry.startTime}`),
+      end: new Date(`${entry.date.toDateString()} ${entry.endTime}`),
+      backgroundColor: "#e0f7fa",
+      borderColor: "#00acc1",
+      textColor: "#006064",
+    }));
+
+    setEvents(formattedEvents);
+  }, [entries]);
 
   const handleLogin = async () => {
     try {
@@ -379,4 +394,6 @@ export default function CalendarView() {
       </div>
     </>
   );
-}
+};
+
+export default CalendarView;
