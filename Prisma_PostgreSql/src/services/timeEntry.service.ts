@@ -32,3 +32,20 @@ export const createTimeEntry = async (data) => {
 
   return timeEntry;
 };
+
+export const getTimeEntriesByEmployeeId = async (employeeId: string) => {
+  const entries = await prisma.timeEntry.findMany({
+    where: {
+      employee_id: employeeId,
+    },
+    include: {
+      Project: true,
+      Task: true,
+    },
+    orderBy: {
+      start_time: "desc",
+    },
+  });
+
+  return entries;
+};
