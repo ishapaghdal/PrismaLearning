@@ -133,7 +133,7 @@ const TimeEntry = () => {
         selectedDate={selectedDate}
         onDateChange={setSelectedDate}
       />
-      <CalendarView />
+      <CalendarView entries={entries} />
     </div>
   );
 };
