@@ -54,10 +54,43 @@ const TimeEntry = () => {
     }
   }, []);
 
-  // Save entries to localStorage whenever they change
   useEffect(() => {
-    localStorage.setItem("timeEntries", JSON.stringify(entries));
-  }, [entries]);
+    const EMPLOYEE_ID = "676a4232ea1f026a913eabbe";
+
+    const fetchEntries = async () => {
+      try {
+        const response = await fetch(
+          `http://localhost:3000/api/time-entry?employee_id=${EMPLOYEE_ID}`
+        );
+        if (!response.ok) {
+          throw new Error("Failed to fetch time entries");
+        }
+
+        const data = await response.json();
+        console.log("Fetched from backend:", data); // ✅ DEBUG
+
+        const formatted = data.map((entry: any) => ({
+          id: entry.time_entry_id,
+          description: entry.description,
+          projectId: entry.project_id,
+          projectName: entry.Project?.project_name || "Unnamed Project",
+          taskId: entry.task_id,
+          taskName: entry.Task?.task_name || "",
+          startTime: new Date(entry.start_time).toTimeString().slice(0, 5),
+          endTime: new Date(entry.end_time).toTimeString().slice(0, 5),
+          duration: entry.duration,
+          date: new Date(entry.start_time),
+          createdAt: new Date(entry.created_ts),
+        }));
+
+        setEntries(formatted);
+      } catch (error) {
+        console.error("Error fetching time entries from backend:", error);
+      }
+    };
+
+    fetchEntries();
+  }, []);
 
   // Handle adding a new entry
   const handleAddEntry = (
@@ -99,8 +132,8 @@ const TimeEntry = () => {
         selectedDate={selectedDate}
         onDateChange={setSelectedDate}
       />
-          <CalendarView/>
-          </div>
+      <CalendarView />
+    </div>
   );
 };
 
