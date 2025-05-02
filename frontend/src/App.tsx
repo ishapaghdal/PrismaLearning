@@ -4,10 +4,11 @@
 import Calendar from "./components/Calendar";
 // import Calendar from "./component/Calendar";
 import TimeEntry from "./components/TimeEntry";
-import CalendarView from "./components/Calendar-view";
+import CalendarView from "./components/CalendarView";
 
 import "./App.css";
-import "./index.css"
+import "./index.css";
+import ProjectSidebar from "./components/Sidebar";
 
 // export function Calendar() {
 //   return (
@@ -34,8 +35,9 @@ function App() {
   return (
     <>
       {/* <Calendar /> */}
-      <div className="flex flex-col">
+      <div className="flex">
         {/* <CalendarView /> */}
+        <ProjectSidebar />
         <TimeEntry />
       </div>
     </>

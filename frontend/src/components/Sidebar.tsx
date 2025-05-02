@@ -47,7 +47,7 @@ export default function ProjectSidebar() {
   };
 
   return (
-    <div className="w-64 border-r bg-white flex flex-col h-full">
+    <div className="w-88 border-r h-screen sticky top-0 bg-white  flex flex-col">
       <div className="p-4 border-b">
         <h2 className="font-semibold text-gray-700">Project tasks</h2>
       </div>

@@ -2,7 +2,8 @@ import { useState, useEffect } from "react";
 import TimeEntryForm from "./EntryForm";
 import LoggedHoursDisplay from "./LoggedHours";
 import { format } from "date-fns";
-import CalendarView from "./Calendar-view";
+import CalendarView from "./CalendarView";
+import ProjectSidebar from "./Sidebar";
 
 // Type definitions
 export interface TimeEntryData {
@@ -87,7 +88,7 @@ const TimeEntry = () => {
   };
 
   return (
-    <div className="max-w-5xl mx-auto p-4">
+    <div className="mx-12 my-8 flex flex-col w-full  overflow-auto">
       <TimeEntryForm
         onAddEntry={handleAddEntry}
         selectedDate={selectedDate}
@@ -99,8 +100,8 @@ const TimeEntry = () => {
         selectedDate={selectedDate}
         onDateChange={setSelectedDate}
       />
-          <CalendarView/>
-          </div>
+      <CalendarView />
+    </div>
   );
 };
 
