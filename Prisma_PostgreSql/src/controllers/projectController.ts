@@ -1,5 +1,6 @@
 import ProjectService from '../services/getProject.service';
 import TaskService from '../services/getTask.service';
+import { createTimeEntry } from '../services/timeEntry.service';
 
 export const getAllProjectsHandler = async (req, res) => {
   try {
@@ -19,5 +20,17 @@ export const getTasksByProjectIdHandler = async (req, res) => {
     res.json(tasks);
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch tasks' });
+  }
+};
+
+export const createTimeEntryHandler = async (req, res) => {
+  try {
+    const data = req.body;
+
+    const timeEntry = await createTimeEntry(data);
+    res.status(201).json(timeEntry);
+  } catch (error) {
+    console.error("Error creating time entry:", error);
+    res.status(500).json({ error: 'Failed to create time entry' });
   }
 };

@@ -234,32 +234,65 @@ const TimeEntryForm = ({
   };
 
   // Function to handle form submission
-  const handleAddEntry = () => {
+  const handleAddEntry = async () => {
     setShowErrors(true);
     const isValid = validateForm();
 
-    if (isValid) {
-      const newEntry: Omit<TimeEntryData, "id" | "createdAt"> = {
+    if (!isValid || !selectedProject) return;
+
+    const newEntry: Omit<TimeEntryData, "id" | "createdAt"> = {
+      description,
+      projectId: selectedProject.projectId,
+      projectName: selectedProject.projectName,
+      taskId: selectedProject?.taskId,
+      taskName: selectedProject?.taskName,
+      startTime,
+      endTime,
+      duration: timerValue,
+      date: selectedDate,
+    };
+
+    // 1. Add entry to UI
+    onAddEntry(newEntry);
+
+    // 2. Save entry to backend
+    try {
+      const payload = {
         description,
-        projectId: selectedProject!.projectId,
-        projectName: selectedProject!.projectName,
-        taskId: selectedProject?.taskId,
-        taskName: selectedProject?.taskName,
-        startTime,
-        endTime,
+        start_time: `${format(selectedDate, "yyyy-MM-dd")}T${startTime}:00`,
+        end_time: `${format(selectedDate, "yyyy-MM-dd")}T${endTime}:00`,
         duration: timerValue,
-        date: selectedDate,
+        billable: true, // optional: replace with real logic
+        project_id: selectedProject.projectId,
+        task_id: selectedProject?.taskId,
       };
 
-      onAddEntry(newEntry);
+      const response = await fetch("http://localhost:3000/api/time-entry", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify(payload),
+      });
 
-      // Reset form
-      setDescription("");
-      setStartTime("10:00");
-      setEndTime("10:10");
-      setSelectedProject(null);
-      setShowErrors(false);
+      if (!response.ok) {
+        throw new Error("Failed to create time entry");
+      }
+
+      const result = await response.json();
+      console.log("Time entry saved to backend:", result);
+    } catch (error) {
+      console.error("Error saving time entry:", error);
+      // Optional: add a toast/alert for user
     }
+
+    // Reset form
+    setDescription("");
+    setStartTime("10:00");
+    setEndTime("10:10");
+    setSelectedProject(null);
+    setShowErrors(false);
   };
 
   // Group projects by type or other criteria to display in dropdown
