@@ -118,7 +118,6 @@ const TimeEntryForm = ({
       }
 
       const data = await response.json();
-      console.log("Projects fetched:", data);
       setProjects(data);
       setLoading(false);
     } catch (err) {
@@ -153,7 +152,6 @@ const TimeEntryForm = ({
       }
 
       const data = await response.json();
-      console.log(`Tasks for project ${projectId} fetched:`, data);
 
       setTasks((prev) => ({
         ...prev,
@@ -281,7 +279,6 @@ const TimeEntryForm = ({
       }
 
       const result = await response.json();
-      console.log("Time entry saved to backend:", result);
     } catch (error) {
       console.error("Error saving time entry:", error);
       // Optional: add a toast/alert for user

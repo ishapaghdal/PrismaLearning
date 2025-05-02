@@ -5,8 +5,8 @@ import FullCalendar from "@fullcalendar/react";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
 import { Button } from "@/components/ui/button";
-import ProjectSidebar from "./project-sidebar";
-import EventModal from "./event-modal";
+import ProjectSidebar from "./Sidebar";
+import EventModal from "./EventModal";
 import type { Event } from "@/types/event";
 import { gapi } from "gapi-script";
 import TimeEntry from "./TimeEntry";
@@ -146,6 +146,7 @@ export default function CalendarView() {
       const response = await gapi.client.calendar.events.list({
         calendarId: "primary", // or a specific calendar like isha@aubergine.co
         timeMin: new Date().toISOString(),
+        // timeMin: '2025-05-01T00:00:00.000Z',
         showDeleted: false,
         singleEvents: true,
         maxResults: 20,
@@ -224,7 +225,7 @@ export default function CalendarView() {
             },
             attendees: [
               { email: "preet@aubergine.co" },
-              {email : 'hardik.s@aubergine.co'}
+              { email: "hardik.s@aubergine.co" },
             ],
           },
         });
@@ -286,9 +287,7 @@ export default function CalendarView() {
       <Button onClick={handleLogin}>Sign in with Google Calendar</Button>
 
       <div className="flex h-screen">
-        <ProjectSidebar />
         <div className="flex-1 flex flex-col">
-
           <div className="flex items-center gap-2 p-2 border-b">
             <Button
               variant="outline"
@@ -320,7 +319,7 @@ export default function CalendarView() {
                 right: "",
               }}
               nowIndicator={true}
-              dragScroll
+              // dragScroll
               // duration={}
               // eventDragStart={}
               // eventDragStop={}
@@ -330,8 +329,7 @@ export default function CalendarView() {
               //  eventOverlap
               //  eventResizeStart={}
               //  eventResizeStop={}
-               eventTextColor="black"
-               
+              eventTextColor="black"
               slotMinTime="00:00:00"
               slotMaxTime="23:59:59"
               selectable={true}
