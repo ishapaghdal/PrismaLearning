@@ -19,33 +19,6 @@ interface Task {
 }
 
 export default function ProjectSidebar() {
-  // const [projectGroups, setProjectGroups] = useState<ProjectGroup[]>([
-  //   {
-  //     id: "1",
-  //     name: "2025 Internship",
-  //     tasks: [
-  //       "Exercise",
-  //       "Taking notes",
-  //       "Meeting",
-  //       "Self learning",
-  //       "Assessment test",
-  //       "Leadership tasks",
-  //     ],
-  //     isOpen: true,
-  //   },
-  //   {
-  //     id: "2",
-  //     name: "Time Companion - Internship",
-  //     tasks: [],
-  //     isOpen: false,
-  //   },
-  //   {
-  //     id: "3",
-  //     name: "Autogine Internal",
-  //     tasks: [],
-  //     isOpen: false,
-  //   },
-  // ]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [tasks, setTasks] = useState<Record<string, Task[]>>({});
 
