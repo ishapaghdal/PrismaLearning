@@ -61,7 +61,7 @@ export default class ProjectService {
       const projectEmployees = await prisma.projectEmployee.findMany({
         where: {
           employee_id,
-          is_deleted: false, // Optional: filter out deleted assignments
+          is_deleted: false,
         },
         include: {
           project: {
@@ -86,9 +86,20 @@ export default class ProjectService {
         },
       });
 
-      // Extract and return only project data
-      const projects = projectEmployees.map((pe) => pe.project);
-      return projects;
+      // Deduplicate projects by project_id
+      const uniqueProjectsMap = new Map<
+        string,
+        (typeof projectEmployees)[0]["project"]
+      >();
+
+      for (const pe of projectEmployees) {
+        const project = pe.project;
+        if (!uniqueProjectsMap.has(project.project_id)) {
+          uniqueProjectsMap.set(project.project_id, project);
+        }
+      }
+
+      return Array.from(uniqueProjectsMap.values());
     } catch (error) {
       throw error;
     }
