@@ -73,7 +73,8 @@ const TimeEntryForm = ({
 
   // Fetch projects when component mounts
   useEffect(() => {
-    fetchProjects();
+    const EMPLOYEE_ID = "605c5c469b9a512b4b59a22d";
+    fetchProjectsByEmployeeId(EMPLOYEE_ID);
   }, []);
 
   // Pre-fetch tasks for all projects to improve UX
@@ -98,31 +99,40 @@ const TimeEntryForm = ({
   }, [description, selectedProject, startTime, endTime, showErrors]);
 
   // Function to fetch projects from the backend
-  const fetchProjects = async () => {
+  const fetchProjectsByEmployeeId = async (employeeId: string) => {
     setLoading(true);
     try {
-      // Use the full URL with the API base
-      const response = await fetch(`${API_BASE_URL}/projects`, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        // Required for handling cookies if your API uses authentication
-        credentials: "include",
-      });
+      const response = await fetch(
+        `${API_BASE_URL}/employee-projects/${employeeId}`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          credentials: "include",
+        }
+      );
 
       if (!response.ok) {
         throw new Error(
-          `Failed to fetch projects: ${response.status} ${response.statusText}`
+          `Failed to fetch projects for employee ${employeeId}: ${response.status} ${response.statusText}`
         );
       }
 
-      const data = await response.json();
-      setProjects(data);
+      const responseData = await response.json();
+      if (responseData.success && Array.isArray(responseData.data)) {
+        setProjects(responseData.data);
+      } else {
+        throw new Error("Invalid response format from server");
+      }
       setLoading(false);
     } catch (err) {
-      console.error("Error fetching projects:", err);
-      setError(err instanceof Error ? err.message : "Error fetching projects");
+      console.error("Error fetching projects by employee ID:", err);
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Error fetching projects by employee ID"
+      );
       setLoading(false);
     }
   };

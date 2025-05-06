@@ -3,6 +3,11 @@ import TimeEntryForm from "./EntryForm";
 import LoggedHoursDisplay from "./LoggedHours";
 import CalendarViewNew from "./CalendarViewNew";
 import { Project, Task } from "@/types/event";
+import CalendarView from "./CalendarView";
+import ProgressTracker from "./ProgressTracker";
+
+// Constant for employee ID
+const EMPLOYEE_ID = "605c5c469b9a512b4b59a22d";
 
 // Type definitions
 export interface TimeEntryData {
@@ -91,9 +96,8 @@ const TimeEntry = () => {
     }
   }, [projects]);
 
+  // Fetch time entries for the specific employee
   useEffect(() => {
-    const EMPLOYEE_ID = "676a4232ea1f026a913eabbe";
-
     const fetchEntries = async () => {
       try {
         const response = await fetch(
@@ -104,7 +108,7 @@ const TimeEntry = () => {
         }
 
         const data = await response.json();
-        console.log("Fetched from backend:", data); // ✅ DEBUG
+        console.log("Fetched time entries from backend:", data);
 
         const formatted = data.map((entry: any) => ({
           id: entry.time_entry_id,
@@ -158,12 +162,13 @@ const TimeEntry = () => {
   };
 
   return (
-    <div className="mx-12 my-8 flex flex-col w-full  overflow-auto">
+    <div className="mx-5 my-8 flex flex-col w-full overflow-auto">
       <TimeEntryForm
         onAddEntry={handleAddEntry}
         selectedDate={selectedDate}
         onDateChange={setSelectedDate}
       />
+      <ProgressTracker />
       <LoggedHoursDisplay
         entries={entries}
         totalHours={calculateTotalHours()}
