@@ -20,6 +20,7 @@ interface EventModalProps {
   onUpdate: (event: TimeEntryData) => void;
   onDelete: (id: string) => void;
   event: TimeEntryData | null;
+  isNewEvent?: boolean; // Add this prop to determine if it's a new or existing event
 }
 
 export default function EventModal({
@@ -29,6 +30,7 @@ export default function EventModal({
   onUpdate,
   onDelete,
   event,
+  isNewEvent = false, // Default to false if not provided
 }: EventModalProps) {
   const [title, setTitle] = useState("");
   const [startDate, setStartDate] = useState("");
@@ -39,56 +41,73 @@ export default function EventModal({
 
   useEffect(() => {
     if (event) {
+      // Use the existing event data
       const start = new Date(event.startTime);
       const end = event.endTime
         ? new Date(event.endTime)
         : new Date(start.getTime() + 60 * 60 * 1000);
 
-      setTitle(event.description);
-      setStartDate(start.toISOString().split("T")[0]);
-      setStartTime(start.toTimeString().slice(0, 5));
-
-      setEndDate(end.toISOString().split("T")[0]);
-      setEndTime(end.toTimeString().slice(0, 5));
+      setTitle(event.title || event.description || "");
+      setStartDate(formatDateForInput(start));
+      setStartTime(formatTimeForInput(start));
+      setEndDate(formatDateForInput(end));
+      setEndTime(formatTimeForInput(end));
       setColor(event.backgroundColor || "#ffebee");
     } else {
+      // Create a new event with default values
       const now = new Date();
       const oneHourLater = new Date(now.getTime() + 60 * 60 * 1000);
 
-      setTitle("Add Title");
-      setStartDate(now.toISOString().split("T")[0]);
-      setStartTime(now.toTimeString().slice(0, 5));
-      setEndDate(now.toISOString().split("T")[0]);
-      setEndTime(oneHourLater.toTimeString().slice(0, 5));
+      setTitle("New Event");
+      setStartDate(formatDateForInput(now));
+      setStartTime(formatTimeForInput(now));
+      setEndDate(formatDateForInput(now));
+      setEndTime(formatTimeForInput(oneHourLater));
       setColor("#ffebee");
     }
   }, [event]);
+
+  const formatDateForInput = (date: Date): string => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
+
+  const formatTimeForInput = (date: Date): string => {
+    const hours = String(date.getHours()).padStart(2, "0");
+    const minutes = String(date.getMinutes()).padStart(2, "0");
+    return `${hours}:${minutes}`;
+  };
 
   const handleSubmit = () => {
     const startDateTime = new Date(`${startDate}T${startTime}`);
     const endDateTime = new Date(`${endDate}T${endTime}`);
 
-    console.log(event);
-
     const newEvent: TimeEntryData = {
-      id: event?.id || "",
+      id: event?.id || crypto.randomUUID(),
       startTime: startDateTime,
       endTime: endDateTime,
       backgroundColor: color,
       borderColor: color,
       textColor: getContrastColor(color),
-      description: "description",
-      projectId: "123",
-      projectName: "project name",
+      description: title, // Use title for description as well for backward compatibility
+      projectId: event?.projectId || "default-project",
+      projectName: event?.projectName || "Default Project",
       title: title,
-      date: new Date(),
+      date: startDateTime,
+      createdAt: new Date(),
+      isShadow: false,
     };
 
-    if (event) {
-      onUpdate(newEvent);
-    } else {
+    // Use isNewEvent to determine whether to call onAdd or onUpdate
+    if (isNewEvent) {
       onAdd(newEvent);
+    } else {
+      onUpdate(newEvent);
     }
+    
+    onClose();
   };
 
   const getContrastColor = (hexColor: string) => {
@@ -116,7 +135,7 @@ export default function EventModal({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>{event ? "Edit Event" : "Add Event"}</DialogTitle>
+          <DialogTitle>{isNewEvent ? "Add Event" : "Edit Event"}</DialogTitle>
         </DialogHeader>
         <div className="grid gap-4 py-4">
           <div className="grid gap-2">
@@ -185,10 +204,14 @@ export default function EventModal({
           </div>
         </div>
         <DialogFooter>
-          {event && (
+          {/* Only show Delete button if it's NOT a new event */}
+          {!isNewEvent && event && (
             <Button
               variant="destructive"
-              onClick={() => onDelete(event.id)}
+              onClick={() => {
+                onDelete(event.id);
+                onClose();
+              }}
               className="mr-auto"
             >
               Delete
@@ -197,7 +220,7 @@ export default function EventModal({
           <Button variant="outline" onClick={onClose}>
             Cancel
           </Button>
-          <Button onClick={handleSubmit}>{event ? "Update" : "Add"}</Button>
+          <Button onClick={handleSubmit}>{isNewEvent ? "Add" : "Update"}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
