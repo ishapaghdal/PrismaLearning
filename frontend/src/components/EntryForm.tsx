@@ -30,9 +30,10 @@ import { TimeEntryData, Project, Task } from "./TimeEntry"; // Import types from
 const API_BASE_URL = "http://localhost:3000/api"; // Replace with your actual backend URL
 
 interface TimeEntryFormProps {
-  onAddEntry: (entry: Omit<TimeEntryData, "id" | "createdAt">) => void;
+  entries: TimeEntryData[];
   selectedDate: Date;
   onDateChange: (date: Date) => void;
+  onAddEntry: (entry: Omit<TimeEntryData, "id" | "createdAt">) => void;
 }
 
 interface SelectedProject {
@@ -49,9 +50,10 @@ interface ValidationErrors {
 }
 
 const TimeEntryForm = ({
-  onAddEntry,
+  entries,
   selectedDate,
   onDateChange,
+  onAddEntry,
 }: TimeEntryFormProps) => {
   const [startTime, setStartTime] = useState<string>("10:00");
   const [endTime, setEndTime] = useState<string>("10:10");

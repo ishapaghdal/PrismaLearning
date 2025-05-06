@@ -3,7 +3,6 @@ import TimeEntryForm from "./EntryForm";
 import LoggedHoursDisplay from "./LoggedHours";
 import CalendarViewNew from "./CalendarViewNew";
 import { Project, Task } from "@/types/event";
-import CalendarView from "./CalendarView";
 import ProgressTracker from "./ProgressTracker";
 
 // Constant for employee ID
@@ -22,6 +21,23 @@ export interface TimeEntryData {
   duration: string;
   date: Date;
   createdAt?: Date;
+}
+
+interface TimeEntryResponse {
+  time_entry_id: string;
+  description: string;
+  project_id: string;
+  Project?: {
+    project_name: string;
+  };
+  task_id?: string;
+  Task?: {
+    task_name: string;
+  };
+  start_time: string;
+  end_time: string;
+  duration: string;
+  created_ts: string;
 }
 
 const API_BASE_URL = "http://localhost:3000/api";
@@ -110,7 +126,7 @@ const TimeEntry = () => {
         const data = await response.json();
         console.log("Fetched time entries from backend:", data);
 
-        const formatted = data.map((entry: any) => ({
+        const formatted = data.map((entry: TimeEntryResponse) => ({
           id: entry.time_entry_id,
           description: entry.description,
           projectId: entry.project_id,
@@ -164,6 +180,7 @@ const TimeEntry = () => {
   return (
     <div className="mx-5 my-8 flex flex-col w-full overflow-auto">
       <TimeEntryForm
+        entries={entries}
         onAddEntry={handleAddEntry}
         selectedDate={selectedDate}
         onDateChange={setSelectedDate}
@@ -175,8 +192,7 @@ const TimeEntry = () => {
         selectedDate={selectedDate}
         onDateChange={setSelectedDate}
       />
-      <CalendarViewNew entries={entries} projects={projects} tasks={tasks} />
-      {/* <CalendarView entries={entries} projects={projects} tasks={tasks} /> */}
+      <CalendarViewNew entries={entries} projects={projects} tasks={Object.values(tasks).flat()} />
     </div>
   );
 };

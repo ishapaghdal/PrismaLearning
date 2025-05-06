@@ -20,7 +20,7 @@ interface EventModalProps {
   onUpdate: (event: TimeEntryData) => void;
   onDelete: (id: string) => void;
   event: TimeEntryData | null;
-  isNewEvent?: boolean; // Add this prop to determine if it's a new or existing event
+  isNewEvent?: boolean;
 }
 
 export default function EventModal({
@@ -30,7 +30,7 @@ export default function EventModal({
   onUpdate,
   onDelete,
   event,
-  isNewEvent = false, // Default to false if not provided
+  isNewEvent = false,
 }: EventModalProps) {
   const [title, setTitle] = useState("");
   const [startDate, setStartDate] = useState("");
@@ -38,6 +38,8 @@ export default function EventModal({
   const [endDate, setEndDate] = useState("");
   const [endTime, setEndTime] = useState("");
   const [color, setColor] = useState("#ffebee");
+  const [isShadowEvent, setIsShadowEvent] = useState(false);
+  const [googleEventId, setGoogleEventId] = useState<string | undefined>();
 
   useEffect(() => {
     if (event) {
@@ -53,6 +55,8 @@ export default function EventModal({
       setEndDate(formatDateForInput(end));
       setEndTime(formatTimeForInput(end));
       setColor(event.backgroundColor || "#ffebee");
+      setIsShadowEvent(event.isShadow || false);
+      setGoogleEventId(event.extendedProps?.googleEventId);
     } else {
       // Create a new event with default values
       const now = new Date();
@@ -64,6 +68,8 @@ export default function EventModal({
       setEndDate(formatDateForInput(now));
       setEndTime(formatTimeForInput(oneHourLater));
       setColor("#ffebee");
+      setIsShadowEvent(false);
+      setGoogleEventId(undefined);
     }
   }, [event]);
 
@@ -91,16 +97,22 @@ export default function EventModal({
       backgroundColor: color,
       borderColor: color,
       textColor: getContrastColor(color),
-      description: title, // Use title for description as well for backward compatibility
+      description: title,
       projectId: event?.projectId || "default-project",
       projectName: event?.projectName || "Default Project",
       title: title,
       date: startDateTime,
       createdAt: new Date(),
-      isShadow: false,
+      isShadow: false, // Always set to false when saving
+      extendedProps: {
+        description: title,
+        projectId: event?.projectId || "default-project",
+        projectName: event?.projectName || "Default Project",
+        isShadow: false,
+        googleEventId: googleEventId, // Preserve the Google Calendar event ID if it exists
+      },
     };
 
-    // Use isNewEvent to determine whether to call onAdd or onUpdate
     if (isNewEvent) {
       onAdd(newEvent);
     } else {
@@ -111,15 +123,11 @@ export default function EventModal({
   };
 
   const getContrastColor = (hexColor: string) => {
-    // Convert hex to RGB
     const r = Number.parseInt(hexColor.slice(1, 3), 16);
     const g = Number.parseInt(hexColor.slice(3, 5), 16);
     const b = Number.parseInt(hexColor.slice(5, 7), 16);
 
-    // Calculate luminance
     const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-
-    // Return black or white based on luminance
     return luminance > 0.5 ? "#000000" : "#ffffff";
   };
 
@@ -135,7 +143,13 @@ export default function EventModal({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>{isNewEvent ? "Add Event" : "Edit Event"}</DialogTitle>
+          <DialogTitle>
+            {isNewEvent 
+              ? isShadowEvent 
+                ? "Convert Google Calendar Event" 
+                : "Add Event"
+              : "Edit Event"}
+          </DialogTitle>
         </DialogHeader>
         <div className="grid gap-4 py-4">
           <div className="grid gap-2">
@@ -204,7 +218,6 @@ export default function EventModal({
           </div>
         </div>
         <DialogFooter>
-          {/* Only show Delete button if it's NOT a new event */}
           {!isNewEvent && event && (
             <Button
               variant="destructive"
@@ -220,7 +233,13 @@ export default function EventModal({
           <Button variant="outline" onClick={onClose}>
             Cancel
           </Button>
-          <Button onClick={handleSubmit}>{isNewEvent ? "Add" : "Update"}</Button>
+          <Button onClick={handleSubmit}>
+            {isNewEvent 
+              ? isShadowEvent 
+                ? "Convert to Real Event" 
+                : "Add"
+              : "Update"}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

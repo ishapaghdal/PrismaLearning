@@ -15,6 +15,18 @@ export interface TimeEntryData {
   borderColor?: string;
   textColor?: string;
   isShadow?: boolean;
+  extendedProps?: {
+    description: string;
+    projectId: string;
+    projectName: string;
+    taskId?: string;
+    taskName?: string;
+    duration?: string;
+    date?: Date;
+    createdAt?: Date;
+    isShadow: boolean;
+    googleEventId?: string;
+  };
 }
 
 // For compatibility with FullCalendar

@@ -8,6 +8,8 @@ import { gapi } from "gapi-script";
 const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 const API_KEY = import.meta.env.VITE_GOOGLE_API_KEY;
 const SCOPES = "https://www.googleapis.com/auth/calendar";
+const EMPLOYEE_ID = "605c5c469b9a512b4b59a22d";
+
 import {
   type TimeEntryData,
   type CalendarEvent,
@@ -16,21 +18,127 @@ import {
   googleCalendarToCalendarEvent,
   getRandomColor,
   calculateDuration,
-  type CalendarViewProps,
 } from "@/types/event";
 
-const CalendarViewNew = ({ entries, projects, tasks }: CalendarViewProps) => {
+interface TimeEntryResponse {
+  time_entry_id: string;
+  description: string;
+  project_id: string;
+  Project?: {
+    project_name: string;
+  };
+  task_id?: string;
+  Task?: {
+    task_name: string;
+  };
+  start_time: string;
+  end_time: string;
+  duration: string;
+  created_ts: string;
+}
+
+interface GoogleCalendarEvent {
+  id: string;
+  summary: string;
+  description?: string;
+  start: {
+    dateTime: string;
+  };
+  end: {
+    dateTime: string;
+  };
+}
+
+interface EventClickInfo {
+  event: {
+    id: string;
+    title: string;
+    start: Date | null;
+    end: Date | null;
+    backgroundColor: string;
+    borderColor: string;
+    textColor: string;
+    extendedProps: {
+      description: string;
+      projectId: string;
+      projectName: string;
+      taskId?: string;
+      taskName?: string;
+      duration?: string;
+      date?: Date;
+      createdAt?: Date;
+      isShadow: boolean;
+      googleEventId?: string;
+    };
+  };
+}
+
+interface SelectInfo {
+  start: Date;
+  end: Date;
+}
+
+interface DateClickInfo {
+  date: Date;
+}
+
+// Add type declaration for window.gapi
+declare global {
+  interface Window {
+    gapi: typeof gapi;
+  }
+}
+
+const CalendarViewNew = () => {
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [shadowEvents, setShadowEvents] = useState<CalendarEvent[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<TimeEntryData | null>(null);
-  const [isNewEvent, setIsNewEvent] = useState(false); // New state to track if it's a new event
+  const [isNewEvent, setIsNewEvent] = useState(false);
   const [view, setView] = useState("timeGridDay");
-  const calendarRef = useRef<any>(null);
+  const calendarRef = useRef<FullCalendar>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isLoading, setIsLoading] = useState(false); // Add loading state for API operations
+  const [isLoading, setIsLoading] = useState(false);
 
-  // Initialize Google API client
+  // Fetch entries from the backend
+  const fetchEntries = async () => {
+    setIsLoading(true);
+    try {
+      const response = await fetch(
+        `http://localhost:3000/api/time-entry?employee_id=${EMPLOYEE_ID}`
+      );
+      if (!response.ok) {
+        throw new Error("Failed to fetch time entries");
+      }
+
+      const data = await response.json();
+      console.log("Fetched time entries from backend:", data);
+
+      const formatted = data.map((entry: TimeEntryResponse) => ({
+        id: entry.time_entry_id,
+        description: entry.description,
+        projectId: entry.project_id,
+        projectName: entry.Project?.project_name || "Unnamed Project",
+        taskId: entry.task_id,
+        taskName: entry.Task?.task_name || "",
+        startTime: new Date(entry.start_time),
+        endTime: new Date(entry.end_time),
+        duration: entry.duration,
+        date: new Date(entry.start_time),
+        createdAt: new Date(entry.created_ts),
+      }));
+
+      // Convert to calendar events
+      const calendarEvents = formatted.map((entry: TimeEntryData) => timeEntryToCalendarEvent(entry));
+      setEvents(calendarEvents);
+    } catch (error) {
+      console.error("Error fetching time entries from backend:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Initialize Google API client and fetch entries
   useEffect(() => {
     const initClient = () => {
       gapi.load("client:auth2", () => {
@@ -44,53 +152,30 @@ const CalendarViewNew = ({ entries, projects, tasks }: CalendarViewProps) => {
             scope: SCOPES,
           })
           .then(() => {
-            // Check if user is already signed in
             if (gapi.auth2.getAuthInstance().isSignedIn.get()) {
               setIsAuthenticated(true);
               fetchCalendarEvents();
             }
           })
-          .catch((error) => {
+          .catch((error: Error) => {
             console.error("Error initializing Google API client:", error);
           });
       });
     };
 
-    if (window.gapi) {
+    if (typeof window !== 'undefined' && window.gapi) {
       initClient();
     }
+
+    // Fetch entries when component mounts
+    fetchEntries();
   }, []);
-
-  // Convert and use provided entries
-  useEffect(() => {
-    if (entries && entries.length > 0) {
-      const formattedEvents = entries.map((entry) => timeEntryToCalendarEvent(entry));
-      setEvents((prevEvents) => {
-        // Filter out any existing entries that might be duplicates
-        const filteredEvents = prevEvents.filter(
-          (event) => !formattedEvents.some((e) => e.id === event.id)
-        );
-        return [...filteredEvents, ...formattedEvents];
-      });
-    }
-  }, [entries]);
-
-  const handleLogin = async () => {
-    try {
-      const authInstance = gapi.auth2.getAuthInstance();
-      await authInstance.signIn();
-      setIsAuthenticated(true);
-      fetchCalendarEvents();
-    } catch (error) {
-      console.error("Google Sign-In failed:", error);
-    }
-  };
 
   const fetchCalendarEvents = async () => {
     try {
       const response = await gapi.client.calendar.events.list({
         calendarId: "primary",
-        timeMin: new Date().toISOString(), // Use current time instead of hardcoded date
+        timeMin: new Date().toISOString(),
         showDeleted: false,
         singleEvents: true,
         maxResults: 20,
@@ -101,9 +186,31 @@ const CalendarViewNew = ({ entries, projects, tasks }: CalendarViewProps) => {
       console.log("Fetched Google Calendar events:", googleEvents);
 
       // Convert Google Calendar events to our format
-      const calendarEvents = googleEvents.map((event: any) => 
-        googleCalendarToCalendarEvent(event)
-      );
+      const calendarEvents = googleEvents
+        .map((event: GoogleCalendarEvent) => ({
+          ...googleCalendarToCalendarEvent(event),
+          extendedProps: {
+            ...googleCalendarToCalendarEvent(event).extendedProps,
+            googleEventId: event.id, // Store the Google Calendar event ID
+          },
+        }))
+        .filter((event: CalendarEvent) => {
+          // Check if this event already exists in our database
+          const startTime = new Date(event.start);
+          const endTime = new Date(event.end);
+          
+          // Check if there's an existing event with the same time range
+          return !events.some(existingEvent => {
+            const existingStart = new Date(existingEvent.start);
+            const existingEnd = new Date(existingEvent.end);
+            
+            return (
+              startTime.getTime() === existingStart.getTime() &&
+              endTime.getTime() === existingEnd.getTime() &&
+              event.title === existingEvent.title
+            );
+          });
+        });
 
       // Add these as shadow events
       setShadowEvents(calendarEvents);
@@ -112,111 +219,9 @@ const CalendarViewNew = ({ entries, projects, tasks }: CalendarViewProps) => {
     }
   };
 
-  const handleAddEntry = async (entry: TimeEntryData) => {
-    try {
-      // Ensure the entry has an ID
-      const newEntry = {
-        ...entry,
-        id: entry.id || crypto.randomUUID(),
-        isShadow: false,
-      };
-
-      // Make sure colors are set
-      if (!newEntry.backgroundColor) {
-        const color = getRandomColor();
-        newEntry.backgroundColor = color.bg;
-        newEntry.borderColor = color.border;
-        newEntry.textColor = color.text;
-      }
-
-      // Save entry to backend
-      if (!entry.isShadow) {
-        try {
-          // Calculate duration string if not provided
-          const duration = entry.duration || calculateDuration(entry.startTime, entry.endTime);
-          
-          // Format dates to match API expectations
-          const startDate = new Date(entry.startTime);
-          const formattedStartTime = `${startDate.getHours().toString().padStart(2, '0')}:${startDate.getMinutes().toString().padStart(2, '0')}`;
-          
-          const endDate = new Date(entry.endTime);
-          const formattedEndTime = `${endDate.getHours().toString().padStart(2, '0')}:${endDate.getMinutes().toString().padStart(2, '0')}`;
-          
-          // Format date in yyyy-MM-dd
-          const formattedDate = `${startDate.getFullYear()}-${(startDate.getMonth() + 1).toString().padStart(2, '0')}-${startDate.getDate().toString().padStart(2, '0')}`;
-          
-          const payload = {
-            description: entry.description || entry.title,
-            start_time: `${formattedDate}T${formattedStartTime}:00`,
-            end_time: `${formattedDate}T${formattedEndTime}:00`,
-            duration: duration,
-            billable: true, // optional: replace with real logic
-            project_id: entry.projectId || "default-project",
-            task_id: entry.taskId || null,
-          };
-
-          const response = await fetch("http://localhost:3000/api/time-entry", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            credentials: "include",
-            body: JSON.stringify(payload),
-          });
-
-          if (!response.ok) {
-            throw new Error("Failed to create time entry");
-          }
-
-          const result = await response.json();
-          console.log("✅ Successfully saved to database:", result);
-          
-          // Update the ID if the backend generated a new one
-          if (result.id) {
-            newEntry.id = result.id;
-          }
-        } catch (apiError) {
-          console.error("Error saving time entry to API:", apiError);
-          // Optionally show an error message to the user
-        }
-      }
-
-      // Convert to calendar event format
-      const calendarEvent = timeEntryToCalendarEvent(newEntry);
-      
-      // Add to our events state
-      setEvents((prevEvents) => [...prevEvents, calendarEvent]);
-      
-      // If the user is authenticated with Google, also add to Google Calendar
-      if (isAuthenticated && gapi.client && !entry.isShadow) {
-        await gapi.client.calendar.events.insert({
-          calendarId: "primary",
-          sendUpdates: "all",
-          resource: {
-            summary: newEntry.title || newEntry.description,
-            description: newEntry.description,
-            start: {
-              dateTime: newEntry.startTime.toISOString(),
-              timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-            },
-            end: {
-              dateTime: newEntry.endTime.toISOString(),
-              timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-            },
-          },
-        });
-        console.log("✅ Successfully added to Google Calendar");
-        
-        // Refresh Google Calendar events
-        fetchCalendarEvents();
-      }
-    } catch (error) {
-      console.error("Error adding event:", error);
-    }
-  };
-
-  const handleEventClick = (info: any) => {
+  const handleEventClick = (info: EventClickInfo) => {
     const event = info.event;
+    if (!event.start || !event.end) return;
     
     // Check if this is a shadow event from Google Calendar
     if (event.extendedProps.isShadow) {
@@ -230,8 +235,11 @@ const CalendarViewNew = ({ entries, projects, tasks }: CalendarViewProps) => {
         borderColor: event.borderColor,
         textColor: event.textColor,
         extendedProps: {
-          ...event.extendedProps,
-          isShadow: false, // Mark as no longer a shadow event
+          description: event.title,
+          projectId: "default-project",
+          projectName: "Default Project",
+          isShadow: false,
+          googleEventId: event.extendedProps.googleEventId, // Preserve the Google Calendar event ID
         },
       });
 
@@ -259,6 +267,98 @@ const CalendarViewNew = ({ entries, projects, tasks }: CalendarViewProps) => {
     }
   };
 
+  const handleLogin = async () => {
+    try {
+      const authInstance = gapi.auth2.getAuthInstance();
+      await authInstance.signIn();
+      setIsAuthenticated(true);
+      fetchCalendarEvents();
+    } catch (error) {
+      console.error("Google Sign-In failed:", error);
+    }
+  };
+
+  const handleAddEntry = async (entry: TimeEntryData) => {
+    try {
+      // Ensure the entry has an ID
+      const newEntry = {
+        ...entry,
+        id: entry.id || crypto.randomUUID(),
+        isShadow: false,
+      };
+
+      // Make sure colors are set
+      if (!newEntry.backgroundColor) {
+        const color = getRandomColor();
+        newEntry.backgroundColor = color.bg;
+        newEntry.borderColor = color.border;
+        newEntry.textColor = color.text;
+      }
+
+      // Save entry to backend
+      try {
+        // Calculate duration string if not provided
+        const duration = entry.duration || calculateDuration(entry.startTime, entry.endTime);
+        
+        // Format dates to match API expectations
+        const startDate = new Date(entry.startTime);
+        const formattedStartTime = `${startDate.getHours().toString().padStart(2, '0')}:${startDate.getMinutes().toString().padStart(2, '0')}`;
+        
+        const endDate = new Date(entry.endTime);
+        const formattedEndTime = `${endDate.getHours().toString().padStart(2, '0')}:${endDate.getMinutes().toString().padStart(2, '0')}`;
+        
+        // Format date in yyyy-MM-dd
+        const formattedDate = `${startDate.getFullYear()}-${(startDate.getMonth() + 1).toString().padStart(2, '0')}-${startDate.getDate().toString().padStart(2, '0')}`;
+        
+        const payload = {
+          description: entry.description || entry.title,
+          start_time: `${formattedDate}T${formattedStartTime}:00`,
+          end_time: `${formattedDate}T${formattedEndTime}:00`,
+          duration: duration,
+          billable: true,
+          project_id: entry.projectId || "default-project",
+          task_id: entry.taskId || null,
+        };
+
+        const response = await fetch("http://localhost:3000/api/time-entry", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          credentials: "include",
+          body: JSON.stringify(payload),
+        });
+
+        if (!response.ok) {
+          throw new Error("Failed to create time entry");
+        }
+
+        const result = await response.json();
+        console.log("✅ Successfully saved to database:", result);
+        
+        // Update the ID if the backend generated a new one
+        if (result.id) {
+          newEntry.id = result.id;
+        }
+
+        // If this was a shadow event, remove it from shadow events
+        if (entry.extendedProps?.googleEventId) {
+          setShadowEvents(prev => prev.filter(e => e.extendedProps.googleEventId !== entry.extendedProps.googleEventId));
+        }
+      } catch (apiError) {
+        console.error("Error saving time entry to API:", apiError);
+      }
+
+      // Convert to calendar event format
+      const calendarEvent = timeEntryToCalendarEvent(newEntry);
+      
+      // Add to our events state
+      setEvents((prevEvents) => [...prevEvents, calendarEvent]);
+    } catch (error) {
+      console.error("Error adding event:", error);
+    }
+  };
+
   const handleUpdateEvent = async (entry: TimeEntryData) => {
     try {
       // Ensure the entry has consistent properties
@@ -275,52 +375,48 @@ const CalendarViewNew = ({ entries, projects, tasks }: CalendarViewProps) => {
         updatedEntry.textColor = color.text;
       }
 
-      // Update the entry in the backend if it's not a shadow entry
-      if (!entry.isShadow) {
-        try {
-          // Calculate duration string if not provided
-          const duration = entry.duration || calculateDuration(entry.startTime, entry.endTime);
-          
-          // Format dates to match API expectations
-          const startDate = new Date(entry.startTime);
-          const formattedStartTime = `${startDate.getHours().toString().padStart(2, '0')}:${startDate.getMinutes().toString().padStart(2, '0')}`;
-          
-          const endDate = new Date(entry.endTime);
-          const formattedEndTime = `${endDate.getHours().toString().padStart(2, '0')}:${endDate.getMinutes().toString().padStart(2, '0')}`;
-          
-          // Format date in yyyy-MM-dd
-          const formattedDate = `${startDate.getFullYear()}-${(startDate.getMonth() + 1).toString().padStart(2, '0')}-${startDate.getDate().toString().padStart(2, '0')}`;
-          
-          const payload = {
-            description: entry.description || entry.title,
-            start_time: `${formattedDate}T${formattedStartTime}:00`,
-            end_time: `${formattedDate}T${formattedEndTime}:00`,
-            duration: duration,
-            billable: true, // optional: replace with real logic
-            project_id: entry.projectId || "default-project",
-            task_id: entry.taskId || null,
-          };
+      // Update the entry in the backend
+      try {
+        // Calculate duration string if not provided
+        const duration = entry.duration || calculateDuration(entry.startTime, entry.endTime);
+        
+        // Format dates to match API expectations
+        const startDate = new Date(entry.startTime);
+        const formattedStartTime = `${startDate.getHours().toString().padStart(2, '0')}:${startDate.getMinutes().toString().padStart(2, '0')}`;
+        
+        const endDate = new Date(entry.endTime);
+        const formattedEndTime = `${endDate.getHours().toString().padStart(2, '0')}:${endDate.getMinutes().toString().padStart(2, '0')}`;
+        
+        // Format date in yyyy-MM-dd
+        const formattedDate = `${startDate.getFullYear()}-${(startDate.getMonth() + 1).toString().padStart(2, '0')}-${startDate.getDate().toString().padStart(2, '0')}`;
+        
+        const payload = {
+          description: entry.description || entry.title,
+          start_time: `${formattedDate}T${formattedStartTime}:00`,
+          end_time: `${formattedDate}T${formattedEndTime}:00`,
+          duration: duration,
+          billable: true,
+          project_id: entry.projectId || "default-project",
+          task_id: entry.taskId || null,
+        };
 
-          // Assuming your API has an update endpoint
-          const response = await fetch(`http://localhost:3000/api/time-entry/${entry.id}`, {
-            method: "PUT", // Use PATCH if your API supports partial updates
-            headers: {
-              "Content-Type": "application/json",
-            },
-            credentials: "include",
-            body: JSON.stringify(payload),
-          });
+        const response = await fetch(`http://localhost:3000/api/time-entry/${entry.id}`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          credentials: "include",
+          body: JSON.stringify(payload),
+        });
 
-          if (!response.ok) {
-            throw new Error("Failed to update time entry");
-          }
-
-          const result = await response.json();
-          console.log("✅ Successfully updated in database:", result);
-        } catch (apiError) {
-          console.error("Error updating time entry in API:", apiError);
-          // Optionally show an error message to the user
+        if (!response.ok) {
+          throw new Error("Failed to update time entry");
         }
+
+        const result = await response.json();
+        console.log("✅ Successfully updated in database:", result);
+      } catch (apiError) {
+        console.error("Error updating time entry in API:", apiError);
       }
 
       // Convert to calendar event format
@@ -330,9 +426,6 @@ const CalendarViewNew = ({ entries, projects, tasks }: CalendarViewProps) => {
       setEvents((prevEvents) => 
         prevEvents.map((e) => e.id === calendarEvent.id ? calendarEvent : e)
       );
-      
-      // If the user is authenticated with Google, we could also update the Google Calendar event here
-      // This would require storing the Google Calendar event ID with our entry and using it for updates
     } catch (error) {
       console.error("Error updating event:", error);
     }
@@ -361,21 +454,17 @@ const CalendarViewNew = ({ entries, projects, tasks }: CalendarViewProps) => {
           console.log("✅ Successfully deleted from database");
         } catch (apiError) {
           console.error("Error deleting time entry in API:", apiError);
-          // Optionally show an error message to the user
         }
       }
       
       // Remove from our events state
       setEvents((prevEvents) => prevEvents.filter((e) => e.id !== id));
-      
-      // If the user is authenticated with Google and this was originally from Google Calendar
-      // we could also delete the Google Calendar event here if we tracked the Google Calendar event ID
     } catch (error) {
       console.error("Error deleting event:", error);
     }
   };
 
-  const handleSelect = (info: any) => {
+  const handleSelect = (info: SelectInfo) => {
     // When time range is selected, create default event within that range
     const color = getRandomColor();
     const defaultEvent: TimeEntryData = {
@@ -399,7 +488,7 @@ const CalendarViewNew = ({ entries, projects, tasks }: CalendarViewProps) => {
     setIsModalOpen(true);
   };
 
-  const handleDateClick = (arg: any) => {
+  const handleDateClick = (arg: DateClickInfo) => {
     // When a specific date/time is clicked, create a default 1-hour event
     const startTime = arg.date;
     const endTime = new Date(startTime.getTime() + 60 * 60 * 1000);
@@ -435,6 +524,15 @@ const CalendarViewNew = ({ entries, projects, tasks }: CalendarViewProps) => {
       calendarApi.changeView(fullCalendarView);
     }
   };
+
+  // Add loading indicator
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -488,8 +586,52 @@ const CalendarViewNew = ({ entries, projects, tasks }: CalendarViewProps) => {
               height="100%"
               events={[...events, ...shadowEvents]}
               dateClick={handleDateClick}
-              eventResize={(info) => handleEventClick(info)}
-              eventClick={handleEventClick}
+              eventResize={(info) => {
+                const event = info.event;
+                if (!event.start || !event.end) return;
+                
+                handleEventClick({
+                  event: {
+                    id: event.id,
+                    title: event.title,
+                    start: event.start,
+                    end: event.end,
+                    backgroundColor: event.backgroundColor || '',
+                    borderColor: event.borderColor || '',
+                    textColor: event.textColor || '',
+                    extendedProps: {
+                      description: event.title,
+                      projectId: 'default-project',
+                      projectName: 'Default Project',
+                      isShadow: false,
+                      ...event.extendedProps,
+                    },
+                  },
+                });
+              }}
+              eventClick={(arg) => {
+                const event = arg.event;
+                if (!event.start || !event.end) return;
+                
+                handleEventClick({
+                  event: {
+                    id: event.id,
+                    title: event.title,
+                    start: event.start,
+                    end: event.end,
+                    backgroundColor: event.backgroundColor || '',
+                    borderColor: event.borderColor || '',
+                    textColor: event.textColor || '',
+                    extendedProps: {
+                      description: event.title,
+                      projectId: 'default-project',
+                      projectName: 'Default Project',
+                      isShadow: false,
+                      ...event.extendedProps,
+                    },
+                  },
+                });
+              }}
               select={handleSelect}
               eventTimeFormat={{
                 hour: "2-digit",
@@ -537,7 +679,7 @@ const CalendarViewNew = ({ entries, projects, tasks }: CalendarViewProps) => {
               onUpdate={handleUpdateEvent}
               onDelete={handleDeleteEvent}
               event={selectedEvent}
-              isNewEvent={isNewEvent} // Pass the isNewEvent flag to the modal
+              isNewEvent={isNewEvent}
             />
           )}
         </div>
