@@ -12,7 +12,7 @@ export const createTimeEntry = async (data) => {
     task_id,
   } = data;
 
-  const employee_id = "676a4232ea1f026a913eabbe"; // constant for now
+  const employee_id = "605c5c469b9a512b4b59a22d"; // constant for now
 
   const timeEntry = await prisma.timeEntry.create({
     data: {
