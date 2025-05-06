@@ -4,7 +4,6 @@ import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
 import { Button } from "@/components/ui/button";
 import EventModal from "./EventModal";
-import type { TimeEntryData as Event } from "@/types/event";
 import { gapi } from "gapi-script";
 const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 const API_KEY = import.meta.env.VITE_GOOGLE_API_KEY;
@@ -14,30 +13,39 @@ import {
   type CalendarEvent,
   timeEntryToCalendarEvent,
   calendarEventToTimeEntry,
+  CalendarViewProps,
 } from "@/types/event";
 
-interface CalendarViewProps {
-  entries: TimeEntryData[];
-  projects: Project[];
-  tasks: [];
-}
+// Random color generator
+const getRandomColor = () => {
+  const colors = [
+    { bg: "#ffebee", border: "#ffcdd2", text: "#c62828" }, // Red
+    { bg: "#e3f2fd", border: "#bbdefb", text: "#1565c0" }, // Blue
+    { bg: "#f1f8e9", border: "#dcedc8", text: "#33691e" }, // Green
+    { bg: "#fff8e1", border: "#ffecb3", text: "#ff6f00" }, // Yellow
+    { bg: "#f3e5f5", border: "#e1bee7", text: "#6a1b9a" }, // Purple
+    { bg: "#e0f7fa", border: "#b2ebf2", text: "#00838f" }, // Cyan
+    { bg: "#fbe9e7", border: "#ffccbc", text: "#bf360c" }, // Deep Orange
+  ];
+  return colors[Math.floor(Math.random() * colors.length)];
+};
 
-interface Project {
-  projectId: string;
-  projectName: string;
-  taskId?: string;
-  taskName?: string;
-}
+// Calculate duration between two dates
+const calculateDuration = (start: Date, end: Date): string => {
+  const diffMs = end.getTime() - start.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  const hours = Math.floor(diffMins / 60);
+  const mins = diffMins % 60;
+  return `${hours}h ${mins}m`;
+};
 
-const CalendarView: React.FC<CalendarViewProps> = ({
-  entries,
-  projects,
-  tasks,
-}) => {
-  const [events, setEvents] = useState<Event[]>([]);
+const CalendarViewNew = ({ entries, projects, tasks }: CalendarViewProps) => {
+  const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [shadowEvents, setShadowEvents] = useState<CalendarEvent[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
+  const [selectedEvent, setSelectedEvent] = useState<TimeEntryData | null>(
+    null
+  );
   const [view, setView] = useState("timeGridDay");
   const calendarRef = useRef<any>(null);
   const [selectedTimeRange, setSelectedTimeRange] = useState<{
@@ -45,119 +53,24 @@ const CalendarView: React.FC<CalendarViewProps> = ({
     end: Date;
   } | null>(null);
 
-  // Random color generator
-  const getRandomColor = () => {
-    const colors = [
-      { bg: "#ffebee", border: "#ffcdd2", text: "#c62828" }, // Red
-      { bg: "#e3f2fd", border: "#bbdefb", text: "#1565c0" }, // Blue
-      { bg: "#f1f8e9", border: "#dcedc8", text: "#33691e" }, // Green
-      { bg: "#fff8e1", border: "#ffecb3", text: "#ff6f00" }, // Yellow
-      { bg: "#f3e5f5", border: "#e1bee7", text: "#6a1b9a" }, // Purple
-      { bg: "#e0f7fa", border: "#b2ebf2", text: "#00838f" }, // Cyan
-      { bg: "#fbe9e7", border: "#ffccbc", text: "#bf360c" }, // Deep Orange
-    ];
-    return colors[Math.floor(Math.random() * colors.length)];
-  };
-
-  // Calculate duration between two dates
-  const calculateDuration = (start: Date, end: Date): string => {
-    const diffMs = end.getTime() - start.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
-    const hours = Math.floor(diffMins / 60);
-    const mins = diffMins % 60;
-    return `${hours}h ${mins}m`;
-  };
-
-  // Create a sample time entry with all required fields
-  const createSampleTimeEntry = (
-    id: string,
-    description: string,
-    projectId: string,
-    projectName: string,
-    taskId: string | undefined,
-    taskName: string | undefined,
-    startTime: string,
-    endTime: string,
-    isShadow: boolean
-  ): TimeEntryData => {
-    const start = new Date(startTime);
-    const end = new Date(endTime);
-    const color = getRandomColor();
-
-    return {
-      id,
-      description,
-      projectId,
-      projectName,
-      taskId,
-      taskName,
-      startTime,
-      endTime,
-      duration: calculateDuration(start, end),
-      date: new Date(start.toDateString()),
-      createdAt: new Date(),
-      backgroundColor: color.bg,
-      borderColor: color.border,
-      textColor: color.text,
-      isShadow,
-    };
-  };
-
-  const handleEventClick = (info: any) => {
-    const event = info.event;
-
-    // Check if this is a shadow event
-    if (event.extendedProps.isShadow) {
-      console.log(info);
-
-      // Convert shadow to a real event by opening the modal
-      const timeEntry = calendarEventToTimeEntry({
-        id: `real-${Date.now()}`,
-        title: event.title,
-        start: event.startStr,
-        end: event.endStr,
-        backgroundColor: event.backgroundColor,
-        borderColor: event.borderColor,
-        textColor: event.textColor,
-        extendedProps: {
-          ...event.extendedProps,
-          isShadow: false,
-        },
-      });
-
-      setSelectedEvent(timeEntry);
-      setIsModalOpen(true);
-    } else {
-      // For regular events, just open the edit modal
-      const timeEntry = calendarEventToTimeEntry({
-        id: event.id,
-        title: event.title,
-        start: event.startStr,
-        end: event.endStr,
-        backgroundColor: event.backgroundColor,
-        borderColor: event.borderColor,
-        textColor: event.textColor,
-        extendedProps: event.extendedProps,
-      });
-
-      setSelectedEvent(timeEntry);
-      setIsModalOpen(true);
-    }
-  };
-  const handleSelect = (info: any) => {
-    setSelectedTimeRange({
-      start: info.start,
-      end: info.end,
-    });
-
-    setSelectedEvent(null);
-    setIsModalOpen(true);
-  };
   useEffect(() => {
-
     // Fetch real events from API
     const fetchEvents = async () => {
       try {
+        // Fetch events from API
+        const initClient = () => {
+          gapi.load("client:auth2", () => {
+            gapi.client.init({
+              apiKey: API_KEY,
+              clientId: CLIENT_ID,
+              discoveryDocs: [
+                "https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest",
+              ],
+              scope: SCOPES,
+            });
+          });
+        };
+        initClient();
         const response = await fetch("/api/events");
         const data = await response.json();
 
@@ -169,7 +82,6 @@ const CalendarView: React.FC<CalendarViewProps> = ({
         setEvents(calendarEvents);
       } catch (error) {
         console.error("Error fetching events:", error);
-        // Use sample data for demonstration
 
         // setEvents(sampleEvents.map((entry) => timeEntryToCalendarEvent(entry)));
       }
@@ -179,28 +91,9 @@ const CalendarView: React.FC<CalendarViewProps> = ({
   }, []);
 
   useEffect(() => {
-    // Fetch events from API
-    const initClient = () => {
-      gapi.load("client:auth2", () => {
-        gapi.client.init({
-          apiKey: API_KEY,
-          clientId: CLIENT_ID,
-          discoveryDocs: [
-            "https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest",
-          ],
-          scope: SCOPES,
-        });
-      });
-    };
-    initClient();
-
-    // fetchEvents()
-  }, []);
-
-  useEffect(() => {
     const formattedEvents = entries.map((entry) => ({
       id: entry.id,
-      title: entry.description,
+      title: entry.title,
       start: new Date(`${entry.date.toDateString()} ${entry.startTime}`),
       end: new Date(`${entry.date.toDateString()} ${entry.endTime}`),
       backgroundColor: "#e0f7fa",
@@ -225,9 +118,9 @@ const CalendarView: React.FC<CalendarViewProps> = ({
   const fetchCalendarEvents = async () => {
     try {
       const response = await gapi.client.calendar.events.list({
-        calendarId: "primary", // or a specific calendar like isha@aubergine.co
+        calendarId: "primary", // @ishapaghdal @Preet2003
         // timeMin: new Date().toISOString(),
-        timeMin: "2025-05-01T00:00:00.000Z",
+        timeMin: "2025-05-04T00:00:00.000Z",
         showDeleted: false,
         singleEvents: true,
         maxResults: 20,
@@ -238,13 +131,27 @@ const CalendarView: React.FC<CalendarViewProps> = ({
       console.log("Fetched events:", events);
 
       // Map them into your FullCalendar format
-      const calendarEvents = events.map((event) => ({
-        id: event.id,
-        title: event.summary,
-        start: event.start.dateTime || event.start.date,
-        end: event.end.dateTime || event.end.date,
-        isShadow: true,
-      }));
+      const calendarEvents = events.map((event: CalendarEvent) => {
+        const color = getRandomColor();
+        return {
+          id: event.id,
+          title: event.title,
+          start: event.start.dateTime,
+          end: event.end.dateTime,
+          backgroundColor: color.bg,
+          bordercolor: color.border,
+          textColor: color.text,
+          isShadow: true,
+          extendedProps: {
+            description: event.title,
+            projectId: "123",
+            projectName: "Custom Project Name",
+            taskId: "112",
+            taskName: "taskName",
+            duration: "xyz",
+          },
+        };
+      });
 
       setEvents(calendarEvents);
     } catch (err) {
@@ -252,64 +159,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({
     }
   };
 
-  const handleDateClick = (arg: any) => {
-    setSelectedEvent(null);
-    setIsModalOpen(true);
-  };
-
-  // const handleEventClick = (info: any) => {
-  //   setSelectedEvent({
-  //     id: info.event.id,
-  //     title: info.event.title,
-  //     start: info.event.start,
-  //     end: info.event.end,
-  //     backgroundColor: info.event.backgroundColor,
-  //     borderColor: info.event.borderColor,
-  //     textColor: info.event.textColor,
-  //   });
-  //   setIsModalOpen(true);
-  // };
-  // const handleEventClick = (info: any) => {
-  //   const event = info.event;
-
-  //   // Check if this is a shadow event
-  //   if (event.extendedProps.isShadow) {
-  //     // Convert shadow to a real event by opening the modal
-  //     const timeEntry = calendarEventToTimeEntry({
-  //       id: `real-${Date.now()}`,
-  //       title: "",
-  //       start: event.startStr,
-  //       end: event.endStr,
-  //       backgroundColor: event.backgroundColor,
-  //       borderColor: event.borderColor,
-  //       textColor: event.textColor,
-  //       extendedProps: {
-  //         ...event.extendedProps,
-  //         isShadow: false,
-  //       },
-  //     });
-
-  //     setSelectedEvent(timeEntry);
-  //     setIsModalOpen(true);
-  //   } else {
-  //     // For regular events, just open the edit modal
-  //     const timeEntry = calendarEventToTimeEntry({
-  //       id: event.id,
-  //       title: event.title,
-  //       start: event.startStr,
-  //       end: event.endStr,
-  //       backgroundColor: event.backgroundColor,
-  //       borderColor: event.borderColor,
-  //       textColor: event.textColor,
-  //       extendedProps: event.extendedProps,
-  //     });
-
-  //     setSelectedEvent(timeEntry);
-  //     setIsModalOpen(true);
-  //   }
-  // };
-
-  const handleAddEvent = async (entry: TimeEntryData) => {
+  const handleAddEntry = async (entry: TimeEntryData) => {
     try {
       // In a real app, you would send this to your API
       // const response = await fetch('/api/events', {
@@ -334,9 +184,6 @@ const CalendarView: React.FC<CalendarViewProps> = ({
         newEntry.textColor = color.text;
       }
 
-      console.log(newEntry.startTime);
-      console.log(new Date());
-
       const calendarEvent = timeEntryToCalendarEvent(newEntry);
       setEvents([...events, calendarEvent]);
       setIsModalOpen(false);
@@ -346,7 +193,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({
           calendarId: "primary", // or use a specific calendar ID if needed
           sendUpdates: "all",
           resource: {
-            summary: newEntry.taskName,
+            summary: newEntry.title,
             description: newEntry.description || "",
             start: {
               dateTime: newEntry.startTime,
@@ -368,55 +215,47 @@ const CalendarView: React.FC<CalendarViewProps> = ({
     }
   };
 
-  // const handleAddEvent = async (event: Event) => {
-  //   try {
-  //     // In a real app, you would send this to your API
-  //     // const response = await fetch('/api/events', {
-  //     //   method: 'POST',
-  //     //   headers: { 'Content-Type': 'application/json' },
-  //     //   body: JSON.stringify(event),
-  //     // })
-  //     // const newEvent = await response.json()
+  const handleEventClick = (info: any) => {
+    const event = info.event;
+    console.log(info);
 
-  //     // For demo purposes, we'll just add it to the state
+    // Check if this is a shadow event
+    if (event.extendedProps.isShadow) {
+      // Convert shadow to a real event by opening the modal
+      const timeEntry = calendarEventToTimeEntry({
+        id: `real-${Date.now()}`,
+        title: event.title,
+        start: event.startStr,
+        end: event.endStr,
+        backgroundColor: event.backgroundColor,
+        borderColor: event.borderColor,
+        textColor: event.textColor,
+        extendedProps: {
+          ...event.extendedProps,
 
-  //     const newEvent = {
-  //       ...event,
-  //       id: String(Date.now()),
-  //     };
+          isShadow: false,
+        },
+      });
 
-  //     setEvents([...events, newEvent]);
-  //     setIsModalOpen(false);
+      setSelectedEvent(timeEntry);
+      setIsModalOpen(true);
+    } else {
+      // For regular events, just open the edit modal
+      const timeEntry = calendarEventToTimeEntry({
+        id: event.id,
+        title: event.title,
+        start: event.startStr,
+        end: event.endStr,
+        backgroundColor: event.backgroundColor,
+        borderColor: event.borderColor,
+        textColor: event.textColor,
+        extendedProps: event.extendedProps,
+      });
 
-  //     if (gapi && gapi.client) {
-  //       await gapi.client.calendar.events.insert({
-  //         calendarId: "primary", // or use a specific calendar ID if needed
-  //         sendUpdates: "all",
-  //         resource: {
-  //           summary: event.title,
-  //           description: event.title || "",
-  //           start: {
-  //             dateTime: new Date(event.start).toISOString(),
-  //             timeZone: "UTC",
-  //           },
-  //           end: {
-  //             dateTime: new Date(event.end as string).toISOString(),
-  //             timeZone: "UTC",
-  //           },
-  //           attendees: [
-  //             { email: "preet@aubergine.co" },
-  //             { email: "hardik.s@aubergine.co" },
-  //           ],
-  //         },
-  //       });
-  //       console.log("✅ Successfully added to Google Calendar");
-  //     } else {
-  //       console.warn("⚠️ gapi not initialized");
-  //     }
-  //   } catch (error) {
-  //     console.error("Error adding event:", error);
-  //   }
-  // };
+      setSelectedEvent(timeEntry);
+      setIsModalOpen(true);
+    }
+  };
 
   const handleUpdateEvent = async (entry: TimeEntryData) => {
     try {
@@ -467,6 +306,21 @@ const CalendarView: React.FC<CalendarViewProps> = ({
     }
   };
 
+  const handleSelect = (info: any) => {
+    setSelectedTimeRange({
+      start: info.start,
+      end: info.end,
+    });
+
+    setSelectedEvent(null);
+    setIsModalOpen(true);
+  };
+
+  const handleDateClick = (arg: any) => {
+    setSelectedEvent(null);
+    setIsModalOpen(true);
+  };
+
   const handleViewChange = (viewType: string) => {
     setView(viewType);
     if (calendarRef.current) {
@@ -476,6 +330,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({
       );
     }
   };
+
 
   return (
     <>
@@ -557,7 +412,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({
             <EventModal
               isOpen={isModalOpen}
               onClose={() => setIsModalOpen(false)}
-              onAdd={handleAddEvent}
+              onAdd={handleAddEntry}
               onUpdate={handleUpdateEvent}
               onDelete={handleDeleteEvent}
               event={selectedEvent}
@@ -569,4 +424,4 @@ const CalendarView: React.FC<CalendarViewProps> = ({
   );
 };
 
-export default CalendarView;
+export default CalendarViewNew;

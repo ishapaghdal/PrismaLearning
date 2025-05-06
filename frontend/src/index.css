@@ -207,3 +207,18 @@
   margin-left: -5px;
   border: none;
 }
+
+/* Shadow event styling */
+.shadow-event {
+  opacity: 0.7;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+
+.shadow-event:hover {
+  opacity: 0.9;
+}
+
+.shadow-event .fc-event-title {
+  font-style: italic;
+}
