@@ -16,7 +16,7 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { format } from "date-fns";
+import { format, isSameDay } from "date-fns";
 import {
   CalendarIcon,
   Clock,
@@ -24,10 +24,35 @@ import {
   ChevronDown,
   AlertCircle,
 } from "lucide-react";
-import { TimeEntryData, Project, Task } from "./TimeEntry"; // Import types from parent component
+
+// Define Project and Task interfaces
+interface Project {
+  project_id: string;
+  project_name: string;
+  type?: string;
+}
+
+interface Task {
+  task_id: string;
+  task_name: string;
+}
+
+interface TimeEntryData {
+  id: string;
+  description: string;
+  projectId: string;
+  projectName: string;
+  taskId?: string;
+  taskName?: string;
+  startTime: Date;
+  endTime: Date;
+  duration: string;
+  date: Date;
+  createdAt?: Date;
+}
 
 // API base URL - this should be configured based on your environment
-const API_BASE_URL = "http://localhost:3000/api"; // Replace with your actual backend URL
+const API_BASE_URL = "http://localhost:3000/api";
 
 interface TimeEntryFormProps {
   entries: TimeEntryData[];
@@ -72,6 +97,59 @@ const TimeEntryForm = ({
   const [tasks, setTasks] = useState<Record<string, Task[]>>({});
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Function to get the last entry's end time for the selected date
+  const getLastEntryEndTime = (): string => {
+    const entriesForSelectedDate = entries.filter(entry => 
+      isSameDay(new Date(entry.date), selectedDate)
+    );
+
+    if (entriesForSelectedDate.length === 0) {
+      return "10:00"; // Default start time if no entries
+    }
+
+    // Sort entries by end time and get the latest one
+    const sortedEntries = [...entriesForSelectedDate].sort((a, b) => {
+      const timeA = new Date(`2000-01-01T${a.endTime}`).getTime();
+      const timeB = new Date(`2000-01-01T${b.endTime}`).getTime();
+      return timeB - timeA;
+    });
+
+    // Convert Date to time string (HH:mm format)
+    const endTime = sortedEntries[0].endTime;
+    if (endTime instanceof Date) {
+      return `${endTime.getHours().toString().padStart(2, '0')}:${endTime.getMinutes().toString().padStart(2, '0')}`;
+    }
+    return endTime;
+  };
+
+  // Function to add one hour to a time string
+  const addOneHour = (timeStr: string): string => {
+    try {
+      // Parse the time string
+      const [hours, minutes] = timeStr.split(':').map(Number);
+      
+      // Create a date object for the current day
+      const date = new Date();
+      date.setHours(hours, minutes, 0, 0);
+      
+      // Add one hour
+      date.setHours(date.getHours() + 1);
+      
+      // Format back to HH:mm
+      return `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
+    } catch (error) {
+      console.error('Error adding one hour:', error);
+      return "10:10"; // Fallback time
+    }
+  };
+
+  // Update times when selected date changes or entries change
+  useEffect(() => {
+    const lastEndTime = getLastEntryEndTime();
+    setStartTime(lastEndTime);
+    setEndTime(addOneHour(lastEndTime));
+  }, [selectedDate, entries]);
 
   // Fetch projects when component mounts
   useEffect(() => {
@@ -256,8 +334,8 @@ const TimeEntryForm = ({
       projectName: selectedProject.projectName,
       taskId: selectedProject?.taskId,
       taskName: selectedProject?.taskName,
-      startTime,
-      endTime,
+      startTime: new Date(`2000-01-01T${startTime}`),
+      endTime: new Date(`2000-01-01T${endTime}`),
       duration: timerValue,
       date: selectedDate,
     };
@@ -272,7 +350,7 @@ const TimeEntryForm = ({
         start_time: `${format(selectedDate, "yyyy-MM-dd")}T${startTime}:00`,
         end_time: `${format(selectedDate, "yyyy-MM-dd")}T${endTime}:00`,
         duration: timerValue,
-        billable: true, // optional: replace with real logic
+        billable: true,
         project_id: selectedProject.projectId,
         task_id: selectedProject?.taskId,
       };
@@ -290,18 +368,17 @@ const TimeEntryForm = ({
         throw new Error("Failed to create time entry");
       }
 
-      const result = await response.json();
+      await response.json(); // Just await the response, we don't need the result
+      
+      // Reset form
+      setDescription("");
+      setSelectedProject(null);
+      setShowErrors(false);
+      
+      // Times will be automatically updated by the useEffect
     } catch (error) {
       console.error("Error saving time entry:", error);
-      // Optional: add a toast/alert for user
     }
-
-    // Reset form
-    setDescription("");
-    setStartTime("10:00");
-    setEndTime("10:10");
-    setSelectedProject(null);
-    setShowErrors(false);
   };
 
   // Group projects by type or other criteria to display in dropdown

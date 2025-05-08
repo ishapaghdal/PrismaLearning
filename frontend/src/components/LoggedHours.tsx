@@ -32,14 +32,32 @@ const LoggedHoursDisplay = ({
   };
 
   // Function to format the time range (e.g., "10:00 - 11:30")
-  const formatTimeRange = (startTime: string, endTime: string): string => {
-    return `${startTime} - ${endTime}`;
+  const formatTimeRange = (startTime: Date | string, endTime: Date | string): string => {
+    try {
+      // Convert to Date objects if they're strings
+      const start = typeof startTime === 'string' ? new Date(`2000-01-01T${startTime}`) : startTime;
+      const end = typeof endTime === 'string' ? new Date(`2000-01-01T${endTime}`) : endTime;
+
+      // Format to HH:mm
+      const formatTime = (date: Date) => {
+        return `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
+      };
+
+      return `${formatTime(start)} - ${formatTime(end)}`;
+    } catch (error) {
+      console.error('Error formatting time range:', error);
+      return 'Invalid time range';
+    }
   };
 
-  // Filter entries for the selected date
-  const filteredEntries = entries.filter((entry) =>
-    isSameDay(new Date(entry.date), selectedDate)
-  );
+  // Filter entries for the selected date and sort by start time (latest first)
+  const filteredEntries = entries
+    .filter((entry) => isSameDay(new Date(entry.date), selectedDate))
+    .sort((a, b) => {
+      const timeA = new Date(`2000-01-01T${typeof a.startTime === 'string' ? a.startTime : format(a.startTime, 'HH:mm')}`).getTime();
+      const timeB = new Date(`2000-01-01T${typeof b.startTime === 'string' ? b.startTime : format(b.startTime, 'HH:mm')}`).getTime();
+      return timeB - timeA; // Sort in descending order (latest first)
+    });
 
   // Calculate total hours for filtered entries
   const calculateTotalHours = (): string => {
