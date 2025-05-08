@@ -192,7 +192,7 @@ const TimeEntry = () => {
         selectedDate={selectedDate}
         onDateChange={setSelectedDate}
       />
-      <CalendarViewNew entries={entries} projects={projects} tasks={Object.values(tasks).flat()} />
+      <CalendarViewNew entries={entries} projects={projects} tasks={tasks} />
     </div>
   );
 };
