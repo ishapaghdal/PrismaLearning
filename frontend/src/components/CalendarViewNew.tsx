@@ -89,11 +89,13 @@ declare global {
   }
 }
 
-const CalendarViewNew = () => {
+const CalendarViewNew = ({ projects, tasks, entries }) => {
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [shadowEvents, setShadowEvents] = useState<CalendarEvent[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedEvent, setSelectedEvent] = useState<TimeEntryData | null>(null);
+  const [selectedEvent, setSelectedEvent] = useState<TimeEntryData | null>(
+    null
+  );
   const [isNewEvent, setIsNewEvent] = useState(false);
   const [view, setView] = useState("timeGridDay");
   const calendarRef = useRef<FullCalendar>(null);
@@ -129,7 +131,9 @@ const CalendarViewNew = () => {
       }));
 
       // Convert to calendar events
-      const calendarEvents = formatted.map((entry: TimeEntryData) => timeEntryToCalendarEvent(entry));
+      const calendarEvents = formatted.map((entry: TimeEntryData) =>
+        timeEntryToCalendarEvent(entry)
+      );
       setEvents(calendarEvents);
     } catch (error) {
       console.error("Error fetching time entries from backend:", error);
@@ -163,7 +167,7 @@ const CalendarViewNew = () => {
       });
     };
 
-    if (typeof window !== 'undefined' && window.gapi) {
+    if (typeof window !== "undefined" && window.gapi) {
       initClient();
     }
 
@@ -198,12 +202,12 @@ const CalendarViewNew = () => {
           // Check if this event already exists in our database
           const startTime = new Date(event.start);
           const endTime = new Date(event.end);
-          
+
           // Check if there's an existing event with the same time range
-          return !events.some(existingEvent => {
+          return !events.some((existingEvent) => {
             const existingStart = new Date(existingEvent.start);
             const existingEnd = new Date(existingEvent.end);
-            
+
             return (
               startTime.getTime() === existingStart.getTime() &&
               endTime.getTime() === existingEnd.getTime() &&
@@ -222,7 +226,7 @@ const CalendarViewNew = () => {
   const handleEventClick = (info: EventClickInfo) => {
     const event = info.event;
     if (!event.start || !event.end) return;
-    
+
     // Check if this is a shadow event from Google Calendar
     if (event.extendedProps.isShadow) {
       // Convert shadow to a real event by opening the modal with its data
@@ -298,18 +302,38 @@ const CalendarViewNew = () => {
       // Save entry to backend
       try {
         // Calculate duration string if not provided
-        const duration = entry.duration || calculateDuration(entry.startTime, entry.endTime);
-        
+        const duration =
+          entry.duration || calculateDuration(entry.startTime, entry.endTime);
+
         // Format dates to match API expectations
         const startDate = new Date(entry.startTime);
-        const formattedStartTime = `${startDate.getHours().toString().padStart(2, '0')}:${startDate.getMinutes().toString().padStart(2, '0')}`;
-        
+        const formattedStartTime = `${startDate
+          .getHours()
+          .toString()
+          .padStart(2, "0")}:${startDate
+          .getMinutes()
+          .toString()
+          .padStart(2, "0")}`;
+
         const endDate = new Date(entry.endTime);
-        const formattedEndTime = `${endDate.getHours().toString().padStart(2, '0')}:${endDate.getMinutes().toString().padStart(2, '0')}`;
-        
+        const formattedEndTime = `${endDate
+          .getHours()
+          .toString()
+          .padStart(2, "0")}:${endDate
+          .getMinutes()
+          .toString()
+          .padStart(2, "0")}`;
+
         // Format date in yyyy-MM-dd
-        const formattedDate = `${startDate.getFullYear()}-${(startDate.getMonth() + 1).toString().padStart(2, '0')}-${startDate.getDate().toString().padStart(2, '0')}`;
-        
+        const formattedDate = `${startDate.getFullYear()}-${(
+          startDate.getMonth() + 1
+        )
+          .toString()
+          .padStart(2, "0")}-${startDate
+          .getDate()
+          .toString()
+          .padStart(2, "0")}`;
+
         const payload = {
           description: entry.description || entry.title,
           start_time: `${formattedDate}T${formattedStartTime}:00`,
@@ -335,15 +359,24 @@ const CalendarViewNew = () => {
 
         const result = await response.json();
         console.log("✅ Successfully saved to database:", result);
-        
+
         // Update the ID if the backend generated a new one
         if (result.id) {
           newEntry.id = result.id;
         }
 
+        console.log(entry);
+        
+
         // If this was a shadow event, remove it from shadow events
         if (entry.extendedProps?.googleEventId) {
-          setShadowEvents(prev => prev.filter(e => e.extendedProps.googleEventId !== entry.extendedProps.googleEventId));
+          setShadowEvents((prev) =>
+            prev.filter(
+              (e) =>
+                e.extendedProps.googleEventId !==
+                entry.extendedProps.googleEventId
+            )
+          );
         }
       } catch (apiError) {
         console.error("Error saving time entry to API:", apiError);
@@ -351,7 +384,7 @@ const CalendarViewNew = () => {
 
       // Convert to calendar event format
       const calendarEvent = timeEntryToCalendarEvent(newEntry);
-      
+
       // Add to our events state
       setEvents((prevEvents) => [...prevEvents, calendarEvent]);
     } catch (error) {
@@ -378,18 +411,38 @@ const CalendarViewNew = () => {
       // Update the entry in the backend
       try {
         // Calculate duration string if not provided
-        const duration = entry.duration || calculateDuration(entry.startTime, entry.endTime);
-        
+        const duration =
+          entry.duration || calculateDuration(entry.startTime, entry.endTime);
+
         // Format dates to match API expectations
         const startDate = new Date(entry.startTime);
-        const formattedStartTime = `${startDate.getHours().toString().padStart(2, '0')}:${startDate.getMinutes().toString().padStart(2, '0')}`;
-        
+        const formattedStartTime = `${startDate
+          .getHours()
+          .toString()
+          .padStart(2, "0")}:${startDate
+          .getMinutes()
+          .toString()
+          .padStart(2, "0")}`;
+
         const endDate = new Date(entry.endTime);
-        const formattedEndTime = `${endDate.getHours().toString().padStart(2, '0')}:${endDate.getMinutes().toString().padStart(2, '0')}`;
-        
+        const formattedEndTime = `${endDate
+          .getHours()
+          .toString()
+          .padStart(2, "0")}:${endDate
+          .getMinutes()
+          .toString()
+          .padStart(2, "0")}`;
+
         // Format date in yyyy-MM-dd
-        const formattedDate = `${startDate.getFullYear()}-${(startDate.getMonth() + 1).toString().padStart(2, '0')}-${startDate.getDate().toString().padStart(2, '0')}`;
-        
+        const formattedDate = `${startDate.getFullYear()}-${(
+          startDate.getMonth() + 1
+        )
+          .toString()
+          .padStart(2, "0")}-${startDate
+          .getDate()
+          .toString()
+          .padStart(2, "0")}`;
+
         const payload = {
           description: entry.description || entry.title,
           start_time: `${formattedDate}T${formattedStartTime}:00`,
@@ -400,14 +453,17 @@ const CalendarViewNew = () => {
           task_id: entry.taskId || null,
         };
 
-        const response = await fetch(`http://localhost:3000/api/time-entry/${entry.id}`, {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          credentials: "include",
-          body: JSON.stringify(payload),
-        });
+        const response = await fetch(
+          `http://localhost:3000/api/time-entry/${entry.id}`,
+          {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            credentials: "include",
+            body: JSON.stringify(payload),
+          }
+        );
 
         if (!response.ok) {
           throw new Error("Failed to update time entry");
@@ -421,10 +477,10 @@ const CalendarViewNew = () => {
 
       // Convert to calendar event format
       const calendarEvent = timeEntryToCalendarEvent(updatedEntry);
-      
+
       // Update in our events state
-      setEvents((prevEvents) => 
-        prevEvents.map((e) => e.id === calendarEvent.id ? calendarEvent : e)
+      setEvents((prevEvents) =>
+        prevEvents.map((e) => (e.id === calendarEvent.id ? calendarEvent : e))
       );
     } catch (error) {
       console.error("Error updating event:", error);
@@ -434,29 +490,32 @@ const CalendarViewNew = () => {
   const handleDeleteEvent = async (id: string) => {
     try {
       // Find the event to check if it's a shadow event
-      const eventToDelete = events.find(e => e.id === id);
-      
+      const eventToDelete = events.find((e) => e.id === id);
+
       if (eventToDelete && !eventToDelete.extendedProps.isShadow) {
         // If it's not a shadow event, delete from the backend
         try {
-          const response = await fetch(`http://localhost:3000/api/time-entry/${id}`, {
-            method: "DELETE",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            credentials: "include",
-          });
+          const response = await fetch(
+            `http://localhost:3000/api/time-entry/${id}`,
+            {
+              method: "DELETE",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              credentials: "include",
+            }
+          );
 
           if (!response.ok) {
             throw new Error("Failed to delete time entry");
           }
-          
+
           console.log("✅ Successfully deleted from database");
         } catch (apiError) {
           console.error("Error deleting time entry in API:", apiError);
         }
       }
-      
+
       // Remove from our events state
       setEvents((prevEvents) => prevEvents.filter((e) => e.id !== id));
     } catch (error) {
@@ -467,14 +526,21 @@ const CalendarViewNew = () => {
   const handleSelect = (info: SelectInfo) => {
     // When time range is selected, create default event within that range
     const color = getRandomColor();
+
+    // Fetch first project as default if available
+    const defaultProjectId =
+      projects.length > 0 ? projects[0].project_id : "default-project";
+    const defaultProjectName =
+      projects.length > 0 ? projects[0].project_name : "Default Project";
+
     const defaultEvent: TimeEntryData = {
       id: crypto.randomUUID(),
       startTime: info.start,
       endTime: info.end,
       description: "New Event",
       title: "New Event",
-      projectId: "default-project",
-      projectName: "Default Project",
+      projectId: defaultProjectId,
+      projectName: defaultProjectName,
       date: info.start,
       backgroundColor: color.bg,
       borderColor: color.border,
@@ -482,7 +548,7 @@ const CalendarViewNew = () => {
       isShadow: false,
       duration: calculateDuration(info.start, info.end),
     };
-    
+
     setSelectedEvent(defaultEvent);
     setIsNewEvent(true); // This is a new event
     setIsModalOpen(true);
@@ -493,15 +559,21 @@ const CalendarViewNew = () => {
     const startTime = arg.date;
     const endTime = new Date(startTime.getTime() + 60 * 60 * 1000);
     const color = getRandomColor();
-    
+
+    // Fetch first project as default if available
+    const defaultProjectId =
+      projects.length > 0 ? projects[0].project_id : "default-project";
+    const defaultProjectName =
+      projects.length > 0 ? projects[0].project_name : "Default Project";
+
     const defaultEvent: TimeEntryData = {
       id: crypto.randomUUID(),
       startTime: startTime,
       endTime: endTime,
       description: "New Event",
       title: "New Event",
-      projectId: "default-project",
-      projectName: "Default Project",
+      projectId: defaultProjectId,
+      projectName: defaultProjectName,
       date: startTime,
       backgroundColor: color.bg,
       borderColor: color.border,
@@ -509,16 +581,17 @@ const CalendarViewNew = () => {
       isShadow: false,
       duration: calculateDuration(startTime, endTime),
     };
-    
+
     setSelectedEvent(defaultEvent);
     setIsNewEvent(true); // This is a new event
     setIsModalOpen(true);
   };
 
   const handleViewChange = (viewType: string) => {
-    const fullCalendarView = viewType === "day" ? "timeGridDay" : "timeGridWeek";
+    const fullCalendarView =
+      viewType === "day" ? "timeGridDay" : "timeGridWeek";
     setView(fullCalendarView);
-    
+
     if (calendarRef.current) {
       const calendarApi = calendarRef.current.getApi();
       calendarApi.changeView(fullCalendarView);
@@ -536,11 +609,10 @@ const CalendarViewNew = () => {
 
   return (
     <>
-      <Button 
-        onClick={handleLogin} 
-        disabled={isAuthenticated}
-      >
-        {isAuthenticated ? "Connected to Google Calendar" : "Sign in with Google Calendar"}
+      <Button onClick={handleLogin} disabled={isAuthenticated}>
+        {isAuthenticated
+          ? "Connected to Google Calendar"
+          : "Sign in with Google Calendar"}
       </Button>
 
       <div className="flex h-screen">
@@ -589,20 +661,20 @@ const CalendarViewNew = () => {
               eventResize={(info) => {
                 const event = info.event;
                 if (!event.start || !event.end) return;
-                
+
                 handleEventClick({
                   event: {
                     id: event.id,
                     title: event.title,
                     start: event.start,
                     end: event.end,
-                    backgroundColor: event.backgroundColor || '',
-                    borderColor: event.borderColor || '',
-                    textColor: event.textColor || '',
+                    backgroundColor: event.backgroundColor || "",
+                    borderColor: event.borderColor || "",
+                    textColor: event.textColor || "",
                     extendedProps: {
                       description: event.title,
-                      projectId: 'default-project',
-                      projectName: 'Default Project',
+                      projectId: "default-project",
+                      projectName: "Default Project",
                       isShadow: false,
                       ...event.extendedProps,
                     },
@@ -612,20 +684,20 @@ const CalendarViewNew = () => {
               eventClick={(arg) => {
                 const event = arg.event;
                 if (!event.start || !event.end) return;
-                
+
                 handleEventClick({
                   event: {
                     id: event.id,
                     title: event.title,
                     start: event.start,
                     end: event.end,
-                    backgroundColor: event.backgroundColor || '',
-                    borderColor: event.borderColor || '',
-                    textColor: event.textColor || '',
+                    backgroundColor: event.backgroundColor || "",
+                    borderColor: event.borderColor || "",
+                    textColor: event.textColor || "",
                     extendedProps: {
                       description: event.title,
-                      projectId: 'default-project',
-                      projectName: 'Default Project',
+                      projectId: "default-project",
+                      projectName: "Default Project",
                       isShadow: false,
                       ...event.extendedProps,
                     },
@@ -658,9 +730,7 @@ const CalendarViewNew = () => {
                 return (
                   <div className="p-1">
                     <div className="font-semibold">{arg.event.title}</div>
-                    <div className="text-xs">
-                      {arg.timeText}
-                    </div>
+                    <div className="text-xs">{arg.timeText}</div>
                   </div>
                 );
               }}
